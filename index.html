@@ -1841,198 +1841,247 @@
             applyMapStyle(mapStyle);
         };
         
+        // 安全设置元素值的辅助函数
+        function safeSetValue(elementId, value) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.value = value;
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`无法设置元素 ${elementId} 的值:`, error);
+            }
+            return false;
+        }
+        
+        // 安全设置元素文本的辅助函数
+        function safeSetText(elementId, text) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = text;
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`无法设置元素 ${elementId} 的文本:`, error);
+            }
+            return false;
+        }
+        
+        // 安全设置复选框状态的辅助函数
+        function safeSetChecked(elementId, checked) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.checked = checked;
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`无法设置元素 ${elementId} 的选中状态:`, error);
+            }
+            return false;
+        }
+
         // 随机生成参数
         function randomizeParameters() {
             // 地图尺寸和楼层数保持不变，不随机化
             
             // 随机房间数量 (3-100)
-            
-            // 随机房间数量 (3-100)
             const roomCount = Math.floor(Math.random() * 98) + 3;
-            document.getElementById('roomCount').value = roomCount;
-            document.getElementById('roomValue').textContent = roomCount;
+            safeSetValue('roomCount', roomCount);
+            safeSetText('roomValue', roomCount);
             
             // 随机房间大小 (0-4)
             const roomSize = Math.floor(Math.random() * 5);
-            document.getElementById('roomSize').value = roomSize;
+            safeSetValue('roomSize', roomSize);
             const roomSizeTexts = ['极小', '小', '中', '大', '极大'];
-            document.getElementById('roomSizeValue').textContent = roomSizeTexts[roomSize];
+            safeSetText('roomSizeValue', roomSizeTexts[roomSize]);
             
             // 随机房间位置
             const roomPositions = ['random', 'inner', 'outer', 'mixed'];
             const roomPosition = roomPositions[Math.floor(Math.random() * roomPositions.length)];
-            document.getElementById('roomPosition').value = roomPosition;
+            safeSetValue('roomPosition', roomPosition);
             
             // 随机走廊宽度 (1-10)
             const corridorWidth = Math.floor(Math.random() * 10) + 1;
-            document.getElementById('corridorWidth').value = corridorWidth;
-            const corridorMode = document.getElementById('corridorRandom').value;
+            safeSetValue('corridorWidth', corridorWidth);
+            const corridorMode = document.getElementById('corridorRandom')?.value || 'fixed';
+            let corridorValueText;
             if (corridorMode === 'fixed') {
-                document.getElementById('corridorValue').textContent = corridorWidth + 1;
+                corridorValueText = corridorWidth + 1;
             } else if (corridorMode === 'random') {
-                document.getElementById('corridorValue').textContent = corridorWidth + '-' + (corridorWidth + 2);
+                corridorValueText = corridorWidth + '-' + (corridorWidth + 2);
             } else {
-                document.getElementById('corridorValue').textContent = '1-' + (corridorWidth + 2);
+                corridorValueText = '1-' + (corridorWidth + 2);
             }
+            safeSetText('corridorValue', corridorValueText);
             
             // 随机道路曲折度 (0-4)
             const pathComplexity = Math.floor(Math.random() * 5);
-            document.getElementById('pathComplexity').value = pathComplexity;
+            safeSetValue('pathComplexity', pathComplexity);
             const complexityTexts = ['简单', '较简单', '中', '较复杂', '复杂'];
-            document.getElementById('pathValue').textContent = complexityTexts[pathComplexity];
+            safeSetText('pathValue', complexityTexts[pathComplexity]);
             
 
             
             // 随机走廊模式
             const corridorModes = ['fixed', 'random', 'varied'];
             const corridorModeRandom = corridorModes[Math.floor(Math.random() * corridorModes.length)];
-            document.getElementById('corridorRandom').value = corridorModeRandom;
+            safeSetValue('corridorRandom', corridorModeRandom);
             
             // 随机掩体密度 (10-100)
             const coverDensity = Math.floor(Math.random() * 91) + 10;
-            document.getElementById('coverDensity').value = coverDensity;
-            document.getElementById('coverValue').textContent = coverDensity;
+            safeSetValue('coverDensity', coverDensity);
+            safeSetText('coverValue', coverDensity);
             
             // 随机水域 (0-50)
             const waterAmount = Math.floor(Math.random() * 51);
-            document.getElementById('waterAmount').value = waterAmount;
-            document.getElementById('waterValue').textContent = waterAmount;
+            safeSetValue('waterAmount', waterAmount);
+            safeSetText('waterValue', waterAmount);
             
             // 随机楼梯数 (0-20)
             const stairsCount = Math.floor(Math.random() * 21);
-            document.getElementById('stairsCount').value = stairsCount;
-            document.getElementById('stairsValue').textContent = stairsCount;
+            safeSetValue('stairsCount', stairsCount);
+            safeSetText('stairsValue', stairsCount);
             
             // 随机窗户密度 (0-100)
             const windowDensity = Math.floor(Math.random() * 101);
-            document.getElementById('windowDensity').value = windowDensity;
-            document.getElementById('windowValue').textContent = windowDensity;
+            safeSetValue('windowDensity', windowDensity);
+            safeSetText('windowValue', windowDensity);
             
             // 随机高低差 (0-2)
             const elevation = Math.floor(Math.random() * 3);
-            document.getElementById('elevation').value = elevation;
+            safeSetValue('elevation', elevation);
             const elevationTexts = ['无', '中', '高'];
-            document.getElementById('elevationValue').textContent = elevationTexts[elevation];
+            safeSetText('elevationValue', elevationTexts[elevation]);
             
             // 狙击长道保持用户设置，不随机化
             
             // 随机中路控制
             const midControls = ['none', 'single', 'double', 'complex'];
             const midControl = midControls[Math.floor(Math.random() * midControls.length)];
-            document.getElementById('midControl').value = midControl;
+            safeSetValue('midControl', midControl);
             
             // 随机旋转时间 (0-2)
             const rotateTime = Math.floor(Math.random() * 3);
-            document.getElementById('rotateTime').value = rotateTime;
+            safeSetValue('rotateTime', rotateTime);
             const rotateTexts = ['短', '中', '长'];
-            document.getElementById('rotateValue').textContent = rotateTexts[rotateTime];
+            safeSetText('rotateValue', rotateTexts[rotateTime]);
             
             // 随机垂直度 (0-100)
             const verticality = Math.floor(Math.random() * 101);
-            document.getElementById('verticality').value = verticality;
-            document.getElementById('verticalValue').textContent = verticality;
+            safeSetValue('verticality', verticality);
+            safeSetText('verticalValue', verticality);
             
             // 随机可破坏物 (0-100)
             const breakables = Math.floor(Math.random() * 101);
-            document.getElementById('breakables').value = breakables;
-            document.getElementById('breakValue').textContent = breakables;
+            safeSetValue('breakables', breakables);
+            safeSetText('breakValue', breakables);
             
             // 随机场地布局
             const fieldLayouts = ['indoor', 'outdoor', 'mixed', 'central_outdoor', 'peripheral_outdoor'];
             const fieldLayout = fieldLayouts[Math.floor(Math.random() * fieldLayouts.length)];
-            document.getElementById('fieldLayout').value = fieldLayout;
+            safeSetValue('fieldLayout', fieldLayout);
             
             // 随机游戏模式
             const gameModes = ['team', 'bomb', 'zombie'];
             const gameMode = gameModes[Math.floor(Math.random() * gameModes.length)];
-            document.getElementById('gameMode').value = gameMode;
-            applyGameMode(gameMode);
+            safeSetValue('gameMode', gameMode);
+            try {
+                applyGameMode(gameMode);
+            } catch (error) {
+                console.warn('应用游戏模式失败:', error);
+            }
             
             // 随机地图风格
             const mapStyles = ['balanced', 'ct_sided', 't_sided', 'aim_heavy', 'tactical', 'rush', 
                               'black_town', 'desert_gray', 'new_year_plaza', 'white_house', 
                               'transport_ship', 'satellite_base', 'harbor_dock', 'subway_station'];
             const mapStyle = mapStyles[Math.floor(Math.random() * mapStyles.length)];
-            document.getElementById('mapStyle').value = mapStyle;
-            applyMapStyle(mapStyle);
+            safeSetValue('mapStyle', mapStyle);
+            try {
+                applyMapStyle(mapStyle);
+            } catch (error) {
+                console.warn('应用地图风格失败:', error);
+            }
             
             // 随机外场比例 (0-100)
             const outdoorRatio = Math.floor(Math.random() * 101);
-            document.getElementById('outdoorRatio').value = outdoorRatio;
-            document.getElementById('outdoorValue').textContent = outdoorRatio;
+            safeSetValue('outdoorRatio', outdoorRatio);
+            safeSetText('outdoorValue', outdoorRatio);
             
             // 外场围墙：50% 概率启用
             const outdoorWall = Math.random() < 0.5;
-            const wallInput = document.getElementById('outdoorWall');
-            if (wallInput) wallInput.checked = outdoorWall;
+            safeSetChecked('outdoorWall', outdoorWall);
             
             // 随机生成大厅
             const lobbyTypes = ['none', 'small', 'medium', 'large', 'central', 'circle', 'cross', 'square'];
             const lobbyType = lobbyTypes[Math.floor(Math.random() * lobbyTypes.length)];
-            document.getElementById('generateLobby').value = lobbyType;
+            safeSetValue('generateLobby', lobbyType);
             
             // 随机常见地形/模块参数
             const longLane = Math.floor(Math.random() * 5);
-            document.getElementById('longLane').value = longLane;
+            safeSetValue('longLane', longLane);
             const longLaneTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('longLaneValue').textContent = longLaneTexts[longLane];
+            safeSetText('longLaneValue', longLaneTexts[longLane]);
             
             const shortLane = Math.floor(Math.random() * 5);
-            document.getElementById('shortLane').value = shortLane;
+            safeSetValue('shortLane', shortLane);
             const shortLaneTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('shortLaneValue').textContent = shortLaneTexts[shortLane];
+            safeSetText('shortLaneValue', shortLaneTexts[shortLane]);
             
             const midLane = Math.floor(Math.random() * 5);
-            document.getElementById('midLane').value = midLane;
+            safeSetValue('midLane', midLane);
             const midLaneTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('midLaneValue').textContent = midLaneTexts[midLane];
+            safeSetText('midLaneValue', midLaneTexts[midLane]);
             
             const platform = Math.floor(Math.random() * 5);
-            document.getElementById('platform').value = platform;
+            safeSetValue('platform', platform);
             const platformTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('platformValue').textContent = platformTexts[platform];
+            safeSetText('platformValue', platformTexts[platform]);
             
             const underpass = Math.floor(Math.random() * 5);
-            document.getElementById('underpass').value = underpass;
+            safeSetValue('underpass', underpass);
             const underpassTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('underpassValue').textContent = underpassTexts[underpass];
+            safeSetText('underpassValue', underpassTexts[underpass]);
             
             const connector = Math.floor(Math.random() * 5);
-            document.getElementById('connector').value = connector;
+            safeSetValue('connector', connector);
             const connectorTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('connectorValue').textContent = connectorTexts[connector];
+            safeSetText('connectorValue', connectorTexts[connector]);
             
             const ramp = Math.floor(Math.random() * 5);
-            document.getElementById('ramp').value = ramp;
+            safeSetValue('ramp', ramp);
             const rampTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('rampValue').textContent = rampTexts[ramp];
+            safeSetText('rampValue', rampTexts[ramp]);
             
             const rotation = Math.floor(Math.random() * 5);
-            document.getElementById('rotation').value = rotation;
+            safeSetValue('rotation', rotation);
             const rotationTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('rotationValue').textContent = rotationTexts[rotation];
+            safeSetText('rotationValue', rotationTexts[rotation]);
             
             // 随机包点数量 (1-5)
             const bombSiteCount = Math.floor(Math.random() * 5) + 1;
-            document.getElementById('bombSiteCount').value = bombSiteCount;
-            document.getElementById('bombSiteValue').textContent = bombSiteCount;
+            safeSetValue('bombSiteCount', bombSiteCount);
+            safeSetText('bombSiteValue', bombSiteCount);
             
             // 随机阴点密度 (0-4)
             const shadowPoint = Math.floor(Math.random() * 5);
-            document.getElementById('shadowPoint').value = shadowPoint;
+            safeSetValue('shadowPoint', shadowPoint);
             const shadowPointTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('shadowPointValue').textContent = shadowPointTexts[shadowPoint];
+            safeSetText('shadowPointValue', shadowPointTexts[shadowPoint]);
             
             // 随机房间填充 (0-4)
             const roomFill = Math.floor(Math.random() * 5);
-            document.getElementById('roomFill').value = roomFill;
+            safeSetValue('roomFill', roomFill);
             const roomFillTexts = ['无', '少', '中', '多', '极多'];
-            document.getElementById('roomFillValue').textContent = roomFillTexts[roomFill];
+            safeSetText('roomFillValue', roomFillTexts[roomFill]);
             
             // 随机投掷物点 (5-100)
             const nadeSpots = Math.floor(Math.random() * 96) + 5;
-            document.getElementById('nadeSpots').value = nadeSpots;
-            document.getElementById('nadeValue').textContent = nadeSpots;
+            safeSetValue('nadeSpots', nadeSpots);
+            safeSetText('nadeValue', nadeSpots);
         }
         
         // 安全的边界检查函数
