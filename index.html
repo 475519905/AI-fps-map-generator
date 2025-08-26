@@ -4,7 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CF风格多层竞技地图生成器</title>
+    <!-- Three.js库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 尝试加载OrbitControls
+        const orbitScript = document.createElement('script');
+        orbitScript.src = 'https://threejs.org/examples/js/controls/OrbitControls.js';
+        orbitScript.onerror = function() {
+            console.warn('OrbitControls加载失败，将使用基础控制');
+        };
+        document.head.appendChild(orbitScript);
+    </script>
     <style>
+        :root {
+            /* 深色主题变量 */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #222;
+            --border-color: #333;
+            --text-primary: #f0f0f0;
+            --text-secondary: #ccc;
+            --text-muted: #999;
+            --text-darker: #888;
+            --accent-color: #4CAF50;
+            --accent-hover: #45a049;
+            --button-secondary: #2196F3;
+            --button-secondary-hover: #1976D2;
+            --shadow-light: rgba(0, 0, 0, 0.8);
+            --shadow-heavy: rgba(0, 0, 0, 0.8);
+            --canvas-bg: #000;
+        }
+
+        [data-theme="light"] {
+            /* 浅色主题变量 */
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f8f8;
+            --border-color: #ddd;
+            --text-primary: #333;
+            --text-secondary: #555;
+            --text-muted: #666;
+            --text-darker: #888;
+            --accent-color: #4CAF50;
+            --accent-hover: #45a049;
+            --button-secondary: #2196F3;
+            --button-secondary-hover: #1976D2;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-heavy: rgba(0, 0, 0, 0.15);
+            --canvas-bg: #fff;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,37 +62,80 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0a0a0a;
+            background: var(--bg-primary);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            transition: background-color 0.3s ease;
         }
 
         .container {
-            background: #1a1a1a;
+            background: var(--bg-secondary);
             border-radius: 10px;
             padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 20px 60px var(--shadow-heavy);
             max-width: 1600px;
             width: 100%;
-            border: 1px solid #333;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            position: relative;
         }
 
         h1 {
-            text-align: center;
-            color: #f0f0f0;
-            margin-bottom: 10px;
+            color: var(--text-primary);
             font-size: 2em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            text-shadow: 2px 2px 4px var(--shadow-light);
+            transition: color 0.3s ease;
+            margin: 0;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 0;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--shadow-light);
+        }
+
+        .theme-icon {
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover .theme-icon {
+            transform: rotate(180deg);
         }
 
         .subtitle {
             text-align: center;
-            color: #888;
+            color: var(--text-darker);
             margin-bottom: 25px;
             font-size: 1em;
+            transition: color 0.3s ease;
         }
 
         .controls {
@@ -52,9 +144,10 @@
             gap: 15px;
             margin-bottom: 25px;
             padding: 20px;
-            background: #222;
+            background: var(--bg-tertiary);
             border-radius: 8px;
-            border: 1px solid #333;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
         .control-group {
@@ -64,20 +157,22 @@
 
         label {
             font-weight: bold;
-            color: #999;
+            color: var(--text-muted);
             margin-bottom: 5px;
             font-size: 0.85em;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            transition: color 0.3s ease;
         }
 
         input[type="range"] {
             width: 100%;
             height: 4px;
             border-radius: 2px;
-            background: #333;
+            background: var(--border-color);
             outline: none;
             cursor: pointer;
+            transition: background 0.3s ease;
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -86,37 +181,489 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background: #4CAF50;
+            background: var(--accent-color);
             cursor: pointer;
+            transition: background 0.3s ease;
         }
 
         select {
             padding: 8px;
             border-radius: 4px;
-            border: 1px solid #333;
-            background: #1a1a1a;
-            color: #ccc;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
             font-size: 13px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         select:hover {
-            border-color: #4CAF50;
+            border-color: var(--accent-color);
         }
 
         .value-display {
-            color: #4CAF50;
+            color: var(--accent-color);
             font-weight: bold;
             margin-left: 5px;
+            transition: color 0.3s ease;
         }
 
         .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        /* 统一四按钮布局：桌面端单行四列，居中 */
+        .button-group.unified-actions {
             display: flex;
-            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .button-group.unified-actions .btn {
+            flex: 0 0 auto;
+            min-width: 110px;
+            height: 44px;
+        }
+        
+        /* 主要操作按钮组 */
+        .button-group.primary-actions {
+            margin-bottom: 10px;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            grid-template-columns: none; /* 覆盖grid布局 */
+        }
+        
+        .primary-actions button {
+            background: var(--accent-color);
+            font-weight: bold;
+            font-size: 15px;
+            min-width: 120px;
+            padding: 12px 24px;
+        }
+        
+        .primary-actions button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        /* 辅助功能按钮组 */
+        .secondary-actions {
+            margin-top: 0;
+        }
+
+        /* 统一按钮组件样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: #2a2a2a;
+            color: #eaeaea;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            min-width: 110px;
+            height: 44px;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        .btn--lg {
+            padding: 12px 20px;
+            font-size: 14px;
+            min-width: 110px;
+            height: 44px;
+        }
+
+        .btn--primary {
+            background: var(--accent-color);
+            color: #101010;
+            font-weight: bold;
+        }
+
+        .btn--primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn--secondary {
+            background: #3a3a3a;
+            color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .btn--secondary:hover {
+            background: #4a4a4a;
+            transform: translateY(-1px);
+        }
+
+        .btn--outline {
+            background: transparent;
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .btn--outline:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-hover);
+            color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn--ghost {
+            background: rgba(255, 255, 255, 0.04);
+            color: #eaeaea;
+            font-weight: bold;
+        }
+
+        .btn--ghost:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+        }
+        
+        .secondary-actions button {
+            background: var(--button-secondary);
+            font-size: 14px;
+        }
+        
+        .secondary-actions button:hover {
+            background: var(--button-secondary-hover);
+        }
+
+        @media (max-width: 768px) {
+            .button-group {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            /* 移动端：统一四按钮采用两列布局 */
+            .button-group.unified-actions {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                justify-content: center;
+                gap: 10px;
+                margin-top: 25px;
+                margin-bottom: 15px;
+                padding-top: 15px;
+            }
+
+            .button-group.unified-actions .btn {
+                min-width: 100%;
+                height: 44px;
+            }
+            
+            /* 移动端整体布局优化 */
+            .container {
+                padding: 10px;
+                min-height: 100vh;
+            }
+            
+            .header-container {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .header-container h1 {
+                font-size: 20px;
+                line-height: 1.3;
+            }
+            
+            .subtitle {
+                font-size: 12px;
+                margin-bottom: 15px;
+            }
+            
+            /* 控制面板移动端优化 */
+            .controls-panel {
+                margin-bottom: 15px;
+            }
+            
+            .control-group {
+                margin-bottom: 15px;
+            }
+            
+            .control-group label {
+                font-size: 13px;
+                margin-bottom: 5px;
+                display: block;
+            }
+            
+            .control-group input[type="range"] {
+                width: 100%;
+                height: 35px;
+            }
+            
+            .control-group select {
+                width: 100%;
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            /* 按钮移动端优化 */
+            button {
+                padding: 12px 16px;
+                font-size: 13px;
+                min-height: 44px; /* iOS建议的最小触摸目标 */
+            }
+            
+            /* 移动端按钮组优化 */
+            .button-group.primary-actions {
+                margin-bottom: 8px;
+                gap: 15px;
+                flex-direction: column;
+            }
+            
+            .primary-actions button {
+                font-size: 14px;
+                font-weight: bold;
+                padding: 14px 16px;
+                min-width: 180px;
+                width: 100%;
+                max-width: 250px;
+            }
+            
+            .secondary-actions button {
+                font-size: 13px;
+                padding: 12px 16px;
+            }
+            
+            .theme-toggle {
+                padding: 8px 12px;
+                font-size: 12px;
+                min-height: 40px;
+            }
+            
+            /* Canvas移动端优化 */
+            #canvas {
+                max-width: 100%;
+                height: auto;
+                margin: 10px auto;
+            }
+            
+            /* 楼层选择器移动端优化 */
+            .floor-selector {
+                margin: 10px 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .floor-selector button {
+                flex: 1;
+                min-width: 60px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            /* 种子面板移动端优化 */
+            .seeds-panel {
+                margin-top: 15px;
+                right: 10px;
+                width: calc(100vw - 20px);
+                max-width: 280px;
+            }
+            
+            .seeds-panel-close {
+                font-size: 16px;
+                padding: 6px 10px;
+            }
+            
+            .seeds-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+                gap: 8px;
+            }
+            
+            .seed-item {
+                padding: 8px;
+                font-size: 11px;
+            }
+            
+            /* 图例移动端优化 */
+            .legend {
+                margin-top: 15px;
+            }
+            
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 8px;
+            }
+            
+            .legend-item {
+                font-size: 11px;
+                padding: 6px;
+            }
+            
+            .legend-color {
+                width: 12px;
+                height: 12px;
+            }
+            
+            /* 3D预览移动端优化 */
+            .preview-3d-header {
+                padding: 12px 10px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .preview-3d-title {
+                font-size: 16px;
+                text-align: center;
+            }
+            
+            .preview-3d-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            
+            .preset-view-btn {
+                padding: 8px 12px;
+                font-size: 11px;
+                min-width: 60px;
+            }
+            
+            .preview-3d-close {
+                padding: 8px 16px;
+                font-size: 12px;
+                order: -1; /* 放到最前面 */
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            
+            .preview-3d-canvas {
+                height: calc(100vh - 120px);
+            }
+            
+            .preview-3d-instructions {
+                top: 120px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                width: auto;
+                font-size: 11px;
+                padding: 8px;
+            }
+            
+            .preview-3d-instructions h4 {
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+            
+            .preview-3d-instructions h5 {
+                font-size: 10px;
+                margin: 8px 0 4px 0;
+            }
+            
+            .preview-3d-instructions li {
+                font-size: 10px;
+                margin-bottom: 2px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            /* 小屏手机进一步优化 */
+            .container {
+                padding: 8px;
+            }
+            
+            .header-container h1 {
+                font-size: 18px;
+            }
+            
+            .control-group {
+                margin-bottom: 12px;
+            }
+            
+            /* 小屏主要按钮优化 */
+            .primary-actions button {
+                font-size: 13px;
+                padding: 12px 14px;
+                min-width: 160px;
+            }
+            
+            .seeds-grid {
+                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+                gap: 6px;
+            }
+            
+            .legend-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            
+            .floor-selector button {
+                min-width: 50px;
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+            
+            /* 小屏手机3D预览进一步优化 */
+            .preview-3d-header {
+                padding: 10px 8px;
+            }
+            
+            .preview-3d-title {
+                font-size: 14px;
+            }
+            
+            .preset-view-btn {
+                padding: 6px 8px;
+                font-size: 10px;
+                min-width: 50px;
+            }
+            
+            .preview-3d-close {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            
+            .preview-3d-canvas {
+                height: calc(100vh - 110px);
+            }
+            
+            .preview-3d-instructions {
+                top: 110px;
+                left: 8px;
+                right: 8px;
+                padding: 6px;
+                font-size: 10px;
+            }
+            
+            .preview-3d-instructions h4 {
+                font-size: 11px;
+                margin-bottom: 6px;
+            }
         }
 
         button {
-            background: #4CAF50;
+            background: var(--accent-color);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -124,23 +671,23 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             flex: 1;
         }
 
         button:hover {
-            background: #45a049;
+            background: var(--accent-hover);
             transform: translateY(-1px);
         }
 
         .export-btn {
-            background: #2196F3;
+            background: var(--button-secondary);
         }
 
         .export-btn:hover {
-            background: #1976D2;
+            background: var(--button-secondary-hover);
         }
 
         .floor-selector {
@@ -148,12 +695,13 @@
             gap: 10px;
             margin-bottom: 20px;
             padding: 15px;
-            background: #222;
+            background: var(--bg-tertiary);
             border-radius: 8px;
-            border: 1px solid #333;
+            border: 1px solid var(--border-color);
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
+            transition: all 0.3s ease;
         }
         
         .overlay-btn {
@@ -180,33 +728,34 @@
 
         .floor-btn {
             padding: 10px 20px;
-            background: #333;
-            color: #999;
+            background: var(--border-color);
+            color: var(--text-muted);
             border: 2px solid transparent;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             font-weight: bold;
             min-width: 80px;
         }
 
         .floor-btn:hover {
-            background: #444;
-            color: #ccc;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
         }
 
         .floor-btn.active {
-            background: #4CAF50;
+            background: var(--accent-color);
             color: white;
-            border-color: #5CBF60;
+            border-color: var(--accent-hover);
         }
 
         #canvas {
             display: block;
             margin: 0 auto;
-            border: 2px solid #333;
+            border: 2px solid var(--border-color);
             border-radius: 4px;
-            background: #000;
+            background: var(--canvas-bg);
+            transition: all 0.3s ease;
         }
 
         .map-header {
@@ -219,6 +768,12 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        [data-theme="light"] .map-header {
+            background: linear-gradient(to right, #4CAF50, #388E3C);
+            color: white;
         }
 
         .map-name {
@@ -229,27 +784,30 @@
         .legend {
             margin-top: 20px;
             padding: 15px;
-            background: #222;
+            background: var(--bg-tertiary);
             border-radius: 8px;
-            border: 1px solid #333;
+            border: 1px solid var(--border-color);
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 10px;
+            transition: all 0.3s ease;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #aaa;
+            color: var(--text-muted);
             font-size: 0.85em;
+            transition: color 0.3s ease;
         }
 
         .legend-color {
             width: 20px;
             height: 20px;
-            border: 1px solid #444;
+            border: 1px solid var(--border-color);
             border-radius: 2px;
+            transition: border 0.3s ease;
         }
         
         /* 种子面板样式 */
@@ -258,21 +816,60 @@
             right: 20px;
             top: 100px;
             width: 300px;
-            background: #2a2a2a;
-            border: 2px solid #4CAF50;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-color);
             border-radius: 10px;
             padding: 15px;
-            color: white;
+            color: var(--text-primary);
             max-height: 70vh;
             overflow-y: auto;
             z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .seeds-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            position: relative;
         }
         
         .seeds-panel h3 {
-            margin: 0 0 15px 0;
-            color: #4CAF50;
-            text-align: center;
+            margin: 0;
+            color: var(--accent-color);
             font-size: 18px;
+            transition: color 0.3s ease;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .seeds-panel-close {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            line-height: 1;
+            min-height: auto;
+        }
+        
+        .seeds-panel-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .seeds-panel-close:active {
+            transform: translateY(-50%) scale(0.95);
         }
         
         .seed-controls {
@@ -329,20 +926,23 @@
             margin-bottom: 8px;
         }
         
-        .seed-name {
+                .seed-name {
             font-weight: bold;
-            color: #4CAF50;
+            color: var(--accent-color);
+            transition: color 0.3s ease;
         }
-        
+
         .seed-date {
             font-size: 11px;
-            color: #888;
+            color: var(--text-darker);
+            transition: color 0.3s ease;
         }
-        
+
         .seed-params {
             font-size: 11px;
-            color: #ccc;
+            color: var(--text-secondary);
             line-height: 1.3;
+            transition: color 0.3s ease;
         }
         
         .seed-actions {
@@ -351,19 +951,20 @@
             margin-top: 8px;
         }
         
-        .seed-actions button {
+                .seed-actions button {
             padding: 4px 8px;
-            background: #555;
-            color: white;
-            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 3px;
             cursor: pointer;
             font-size: 10px;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
         }
-        
+
         .seed-actions button:hover {
-            background: #666;
+            background: var(--border-color);
+            color: var(--text-primary);
         }
         
         .seed-actions button.delete {
@@ -373,27 +974,233 @@
         .seed-actions button.delete:hover {
             background: #b71c1c;
         }
+
+        /* 3D预览相关样式 */
+        .preview-3d-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: background 0.3s ease;
+        }
+
+        [data-theme="light"] .preview-3d-container {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .preview-3d-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-3d-header {
+            background: rgba(26, 26, 26, 0.9);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .preview-3d-header {
+            background: rgba(248, 248, 248, 0.95);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .preview-3d-title {
+            color: var(--text-primary);
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .preview-3d-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .preview-3d-close {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .preview-3d-close:hover {
+            background: #b71c1c;
+        }
+
+        .preview-3d-canvas {
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 60px);
+            background: var(--canvas-bg);
+            transition: background 0.3s ease;
+        }
+
+        .preview-3d-instructions {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: var(--text-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.3;
+            width: 280px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px var(--shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .preview-3d-instructions {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-3d-instructions h4 {
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .preview-3d-instructions h5 {
+            color: var(--button-secondary);
+            margin: 10px 0 6px 0;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+
+        .preview-3d-instructions ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 10px 0;
+        }
+
+        .preview-3d-instructions li {
+            margin-bottom: 3px;
+            padding: 2px 0;
+            font-size: 11px;
+        }
+
+        .control-section {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-bottom 0.3s ease;
+        }
+
+        .control-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 8px;
+        }
+
+        .status-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            transition: background 0.3s ease;
+        }
+
+        [data-theme="light"] .status-section {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .preset-view-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .preset-view-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .preset-view-btn:active,
+        .preset-view-btn.active {
+            background: var(--button-secondary);
+            color: white;
+            border-color: var(--button-secondary);
+        }
+
+
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 CF风格多层竞技地图生成器</h1>
+        <div class="header-container">
+            <h1>🎮 CF风格多层竞技地图生成器</h1>
+            <div class="theme-toggle" onclick="toggleTheme()">
+                <span class="theme-icon">🌙</span>
+                <span class="theme-text">深色</span>
+            </div>
+        </div>
         <div class="subtitle">生成多层爆破模式竞技地图</div>
         
         <div class="controls">
             <div class="control-group">
-                <label>地图尺寸: <span class="value-display" id="sizeValue">60</span></label>
-                <input type="range" id="mapSize" min="40" max="800" value="60" step="10">
+                <label>地图X尺寸: <span class="value-display" id="sizeXValue">200</span></label>
+                <input type="range" id="mapSizeX" min="20" max="800" value="200" step="10">
             </div>
             
             <div class="control-group">
-                <label>地图层数: <span class="value-display" id="floorsValue">2</span></label>
-                <input type="range" id="floorCount" min="1" max="10" value="2" step="1">
+                <label>地图Y尺寸: <span class="value-display" id="sizeYValue">200</span></label>
+                <input type="range" id="mapSizeY" min="20" max="800" value="200" step="10">
             </div>
             
             <div class="control-group">
-                <label>房间数量: <span class="value-display" id="roomValue">6</span></label>
-                <input type="range" id="roomCount" min="3" max="100" value="6">
+                <label>地图层数: <span class="value-display" id="floorsValue">1</span></label>
+                <input type="range" id="floorCount" min="1" max="10" value="1" step="1">
+            </div>
+            
+            <div class="control-group">
+                <label>房间数量: <span class="value-display" id="roomValue">12</span></label>
+                <input type="range" id="roomCount" min="0" max="100" value="12">
             </div>
             
             <div class="control-group">
@@ -413,7 +1220,7 @@
             
             <div class="control-group">
                 <label>走廊宽度: <span class="value-display" id="corridorValue">2-4</span></label>
-                <input type="range" id="corridorWidth" min="1" max="10" value="2">
+                <input type="range" id="corridorWidth" min="0" max="10" value="2">
             </div>
             
             <div class="control-group">
@@ -433,23 +1240,23 @@
             </div>
             
             <div class="control-group">
-                <label>掩体密度: <span class="value-display" id="coverValue">20</span>%</label>
-                <input type="range" id="coverDensity" min="10" max="100" value="20" step="5">
+                <label>掩体密度: <span class="value-display" id="coverValue">0</span>%</label>
+                <input type="range" id="coverDensity" min="0" max="100" value="0" step="5">
             </div>
             
             <div class="control-group">
-                <label>水域: <span class="value-display" id="waterValue">5</span>%</label>
-                <input type="range" id="waterAmount" min="0" max="50" value="5" step="5">
+                <label>水域: <span class="value-display" id="waterValue">0</span>%</label>
+                <input type="range" id="waterAmount" min="0" max="50" value="0" step="5">
             </div>
             
             <div class="control-group">
-                <label>楼梯数: <span class="value-display" id="stairsValue">3</span></label>
-                <input type="range" id="stairsCount" min="1" max="20" value="3">
+                <label>楼梯数: <span class="value-display" id="stairsValue">0</span></label>
+                <input type="range" id="stairsCount" min="0" max="20" value="0">
             </div>
             
             <div class="control-group">
-                <label>窗户密度: <span class="value-display" id="windowValue">30</span>%</label>
-                <input type="range" id="windowDensity" min="10" max="100" value="30" step="10">
+                <label>窗户密度: <span class="value-display" id="windowValue">0</span>%</label>
+                <input type="range" id="windowDensity" min="0" max="100" value="0" step="10">
             </div>
             
             <div class="control-group">
@@ -458,8 +1265,8 @@
             </div>
             
             <div class="control-group">
-                <label>狙击长道: <span class="value-display" id="longValue">2</span></label>
-                <input type="range" id="longLanes" min="0" max="20" value="2">
+                <label>狙击长道: <span class="value-display" id="longValue">0</span></label>
+                <input type="range" id="longLanes" min="0" max="20" value="0">
             </div>
             
             <div class="control-group">
@@ -533,18 +1340,12 @@
             </div>
             
             <div class="control-group">
-                <label>外场尺寸: <span class="value-display" id="outdoorSizeValue">中</span></label>
-                <input type="range" id="outdoorSize" min="0" max="2" value="1" step="1">
+                <label>
+                    <input type="checkbox" id="outdoorWall" style="margin-right:8px;vertical-align:middle;"> 外场围墙
+                </label>
             </div>
             
-            <div class="control-group">
-                <label>外场面积: <span class="value-display" id="outdoorAreaValue">中</span></label>
-                <input type="range" id="outdoorArea" min="0" max="4" value="2" step="1">
-            </div>
             
-            <div class="control-group">
-                <label>🔹 常见地形/模块</label>
-            </div>
             
             <div class="control-group">
                 <label>大道生成: <span class="value-display" id="longLaneValue">中</span></label>
@@ -592,8 +1393,8 @@
             </div>
             
             <div class="control-group">
-                <label>阴点密度: <span class="value-display" id="shadowPointValue">中</span></label>
-                <input type="range" id="shadowPoint" min="0" max="4" value="2" step="1">
+                <label>阴点密度: <span class="value-display" id="shadowPointValue">无</span></label>
+                <input type="range" id="shadowPoint" min="0" max="4" value="0" step="1">
             </div>
             
             <div class="control-group">
@@ -621,10 +1422,11 @@
             </div>
             
             <div class="control-group">
-                <div class="button-group">
-                    <button id="generateBtn">生成地图</button>
-                    <button id="randomBtn">随机生成</button>
-                    <button class="export-btn" id="exportBtn">导出</button>
+                <div class="button-group unified-actions">
+                    <button class="btn btn--primary btn--lg" id="generateBtn">生成地图</button>
+                    <button class="btn btn--secondary btn--lg" id="randomBtn">随机生成</button>
+                    <button class="btn btn--outline btn--lg" id="preview3DBtn">3D预览</button>
+                    <button class="btn btn--ghost btn--lg export-btn" id="exportBtn">导出</button>
                 </div>
             </div>
         </div>
@@ -639,7 +1441,10 @@
         <canvas id="canvas"></canvas>
         
         <div class="seeds-panel">
-            <h3>种子收藏</h3>
+            <div class="seeds-panel-header">
+                <h3>种子收藏</h3>
+                <button class="seeds-panel-close" id="seedsPanelCloseBtn">✕</button>
+            </div>
             <div class="seed-controls">
                 <button id="saveSeedBtn">💾 保存当前种子</button>
                 <button id="clearSeedsBtn">🗑️ 清空收藏</button>
@@ -695,6 +1500,22 @@
                 <span>B包点</span>
             </div>
             <div class="legend-item">
+                <div class="legend-color" style="background: #5a1a00;"></div>
+                <span>C包点</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3a5a00;"></div>
+                <span>D包点</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #1a5a00;"></div>
+                <span>E包点</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #8a4a4a;"></div>
+                <span>狙击长道</span>
+            </div>
+            <div class="legend-item">
                 <div class="legend-color" style="background: #3a2020;"></div>
                 <span>T出生点</span>
             </div>
@@ -729,12 +1550,93 @@
         </div>
     </div>
 
+    <!-- 3D预览容器 -->
+    <div class="preview-3d-container" id="preview3DContainer">
+        <div class="preview-3d-content">
+            <div class="preview-3d-header">
+                <div class="preview-3d-title">🎮 3D地图预览</div>
+                <div class="preview-3d-controls">
+                    <button class="preset-view-btn" id="topViewBtn" title="俯视角度">🔝 俯视</button>
+                    <button class="preset-view-btn" id="isometricViewBtn" title="等轴视角">📐 等轴</button>
+                    <button class="preset-view-btn" id="perspectiveViewBtn" title="透视角度">👁️ 透视</button>
+                    <button class="preset-view-btn" id="walkViewBtn" title="行走视角">🚶 行走</button>
+                    <button class="preview-3d-close" id="close3DBtn">关闭</button>
+                </div>
+            </div>
+            <div class="preview-3d-canvas" id="preview3DCanvas"></div>
+            <div class="preview-3d-instructions">
+                <h4>🎮 操作说明</h4>
+                <div class="control-section">
+                    <h5>🖱️ 鼠标控制</h5>
+                    <ul>
+                        <li>左键拖拽：旋转视角</li>
+                        <li>右键拖拽：平移视角</li>
+                        <li>滚轮：缩放视角</li>
+                        <li>双击：聚焦到地图中心</li>
+                    </ul>
+                </div>
+                <div class="control-section">
+                    <h5>⌨️ 键盘快捷键</h5>
+                    <ul>
+                        <li>R：重置视角</li>
+                        <li>F：聚焦地图</li>
+                        <li>1-4：切换预设视角</li>
+                        <li>+/-：缩放</li>
+                        <li>方向键：移动视角</li>
+                        <li>ESC：关闭预览</li>
+                    </ul>
+                </div>
+                <div class="control-section">
+                    <h5>📱 触屏支持</h5>
+                    <ul>
+                        <li>单指拖拽：旋转</li>
+                        <li>双指捏合：缩放</li>
+                        <li>双指拖拽：平移</li>
+                    </ul>
+                </div>
+                <div class="status-section">
+                    <div class="status-item">
+                        控制器：<span id="controlStatus">🔧 加载中...</span>
+                    </div>
+                    <div class="status-item">
+                        状态：<span id="debug3DStatus">初始化中...</span>
+                    </div>
+                    <div class="status-item">
+                        帧率：<span id="fpsCounter">-- FPS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 全局变量
         let mapFloors = [];
         let currentFloor = 0;
         let totalFloors = 2;
         let overlayMode = false;
+        
+        // 3D预览相关变量
+        let scene3D, camera3D, renderer3D, controls3D;
+        let preview3DActive = false;
+        
+        // 增强控制变量
+        let cameraAnimating = false;
+        let targetPosition = new THREE.Vector3();
+        let targetLookAt = new THREE.Vector3();
+        let cameraVelocity = new THREE.Vector3();
+        let lastCameraUpdate = 0;
+        let mapCenter = new THREE.Vector3();
+        let currentPresetView = 'perspective';
+        
+        // 帧率监控
+        let frameCount = 0;
+        let lastFPSUpdate = 0;
+        
+        // 触摸控制变量
+        let touches = {};
+        let touchStartDistance = 0;
+        let touchStartCenter = { x: 0, y: 0 };
         
         // 地图元素类型
         const TileType = {
@@ -761,7 +1663,6 @@
             HIGH_GROUND: 29,   // 高地
             LOW_GROUND: 30,    // 低地
             MEDIUM_GROUND: 31, // 中等地
-            LONG_LANE: 17,     // 狙击长道
             MID_AREA: 18,      // 中路区域
             NADE_SPOT: 19,     // 投掷物点
             BOOST_SPOT: 20,    // 跳点位置
@@ -786,8 +1687,12 @@
         };
         
         // 更新滑块显示
-        document.getElementById('mapSize').oninput = function() {
-            document.getElementById('sizeValue').textContent = this.value;
+        document.getElementById('mapSizeX').oninput = function() {
+            document.getElementById('sizeXValue').textContent = this.value;
+        };
+        
+        document.getElementById('mapSizeY').oninput = function() {
+            document.getElementById('sizeYValue').textContent = this.value;
         };
         
         document.getElementById('floorCount').oninput = function() {
@@ -826,14 +1731,9 @@
             document.getElementById('outdoorValue').textContent = this.value;
         };
         
-        document.getElementById('outdoorSize').oninput = function() {
-            const values = ['小', '中', '大'];
-            document.getElementById('outdoorSizeValue').textContent = values[this.value];
-        };
-        
-        document.getElementById('outdoorArea').oninput = function() {
-            const values = ['极小', '小', '中', '大', '极大'];
-            document.getElementById('outdoorAreaValue').textContent = values[this.value];
+        // 外场围墙参数
+        document.getElementById('outdoorWall').onchange = function() {
+            // 可选择在此触发预览刷新
         };
         
         // 常见地形/模块参数事件监听器
@@ -998,13 +1898,13 @@
             document.getElementById('waterAmount').value = waterAmount;
             document.getElementById('waterValue').textContent = waterAmount;
             
-            // 随机楼梯数 (1-20)
-            const stairsCount = Math.floor(Math.random() * 20) + 1;
+            // 随机楼梯数 (0-20)
+            const stairsCount = Math.floor(Math.random() * 21);
             document.getElementById('stairsCount').value = stairsCount;
             document.getElementById('stairsValue').textContent = stairsCount;
             
-            // 随机窗户密度 (10-100)
-            const windowDensity = Math.floor(Math.random() * 91) + 10;
+            // 随机窗户密度 (0-100)
+            const windowDensity = Math.floor(Math.random() * 101);
             document.getElementById('windowDensity').value = windowDensity;
             document.getElementById('windowValue').textContent = windowDensity;
             
@@ -1014,10 +1914,7 @@
             const elevationTexts = ['无', '中', '高'];
             document.getElementById('elevationValue').textContent = elevationTexts[elevation];
             
-            // 随机狙击长道 (0-20)
-            const longLanes = Math.floor(Math.random() * 21);
-            document.getElementById('longLanes').value = longLanes;
-            document.getElementById('longValue').textContent = longLanes;
+            // 狙击长道保持用户设置，不随机化
             
             // 随机中路控制
             const midControls = ['none', 'single', 'double', 'complex'];
@@ -1064,17 +1961,10 @@
             document.getElementById('outdoorRatio').value = outdoorRatio;
             document.getElementById('outdoorValue').textContent = outdoorRatio;
             
-            // 随机外场尺寸 (0-2)
-            const outdoorSize = Math.floor(Math.random() * 3);
-            document.getElementById('outdoorSize').value = outdoorSize;
-            const outdoorSizeTexts = ['小', '中', '大'];
-            document.getElementById('outdoorSizeValue').textContent = outdoorSizeTexts[outdoorSize];
-            
-            // 随机外场面积 (0-4)
-            const outdoorArea = Math.floor(Math.random() * 5);
-            document.getElementById('outdoorArea').value = outdoorArea;
-            const outdoorAreaTexts = ['极小', '小', '中', '大', '极大'];
-            document.getElementById('outdoorAreaValue').textContent = outdoorAreaTexts[outdoorArea];
+            // 外场围墙：50% 概率启用
+            const outdoorWall = Math.random() < 0.5;
+            const wallInput = document.getElementById('outdoorWall');
+            if (wallInput) wallInput.checked = outdoorWall;
             
             // 随机生成大厅
             const lobbyTypes = ['none', 'small', 'medium', 'large', 'central', 'circle', 'cross', 'square'];
@@ -1145,16 +2035,38 @@
             document.getElementById('nadeValue').textContent = nadeSpots;
         }
         
+        // 安全的边界检查函数
+        function isValidPosition(x, y, floor = 0) {
+            if (!mapFloors || !mapFloors[floor]) return false;
+            if (y < 0 || y >= mapFloors[floor].length) return false;
+            if (!mapFloors[floor][y]) return false;
+            if (x < 0 || x >= mapFloors[floor][y].length) return false;
+            return true;
+        }
+        
+        // 安全的数组访问函数
+        function getTile(x, y, floor = 0, defaultValue = TileType.VOID) {
+            if (!isValidPosition(x, y, floor)) return defaultValue;
+            return mapFloors[floor][y][x];
+        }
+        
+        // 安全的数组设置函数
+        function setTile(x, y, value, floor = 0) {
+            if (!isValidPosition(x, y, floor)) return false;
+            mapFloors[floor][y][x] = value;
+            return true;
+        }
+
         // 初始化地图
-        function initMap(size, floors) {
+        function initMap(sizeX, sizeY, floors) {
             mapFloors = [];
             totalFloors = floors;
             
             for (let f = 0; f < floors; f++) {
                 mapFloors[f] = [];
-                for (let y = 0; y < size; y++) {
+                for (let y = 0; y < sizeY; y++) {
                     mapFloors[f][y] = [];
-                    for (let x = 0; x < size; x++) {
+                    for (let x = 0; x < sizeX; x++) {
                         mapFloors[f][y][x] = TileType.VOID;
                     }
                 }
@@ -1162,7 +2074,8 @@
         }
         
         // 生成房间（支持内外场）
-        function generateRooms(size, roomCount, floor) {
+        function generateRooms(sizeX, sizeY, roomCount, floor) {
+            const size = Math.max(sizeX, sizeY); // 向后兼容
             const rooms = [];
             // 根据房间大小参数调整房间尺寸
             const roomSizeParam = parseInt(document.getElementById('roomSize').value);
@@ -1177,20 +2090,23 @@
             
             // 先创建外场区域
             if (floor === 0 && fieldLayout !== 'indoor') {
-                createOutdoorAreas(size, fieldLayout, outdoorRatio);
+                createOutdoorAreas(Math.max(sizeX, sizeY), fieldLayout, outdoorRatio);
             }
             
             // 计算房间间距（确保房间独立）
             const minSpacing = Math.max(1, Math.floor(size / 50)); // 进一步减小间距
             
-            for (let i = 0; i < roomCount * 100; i++) { // 进一步增加尝试次数
+            // 根据地图大小动态调整尝试次数，避免无限循环
+            const mapSize = Math.max(sizeX, sizeY);
+            const maxAttempts = Math.min(roomCount * 100, mapSize * 5, 10000); // 限制最大尝试次数
+            for (let i = 0; i < maxAttempts; i++) {
                 const width = Math.floor(Math.random() * (maxRoomSize - minRoomSize)) + minRoomSize;
                 const height = Math.floor(Math.random() * (maxRoomSize - minRoomSize)) + minRoomSize;
                 
                 // 根据房间生成位置参数决定房间位置
                 let x, y;
-                const centerX = Math.floor(size / 2);
-                const centerY = Math.floor(size / 2);
+                const centerX = Math.floor(sizeX / 2);
+                const centerY = Math.floor(sizeY / 2);
                 const roadRadius = Math.floor(size / 3); // 假设道路在中心区域
                 
                 switch(roomPosition) {
@@ -1228,17 +2144,17 @@
                         break;
                     default: // 'random'
                         // 随机位置
-                        x = Math.floor(Math.random() * (size - width - minSpacing * 2)) + minSpacing;
-                        y = Math.floor(Math.random() * (size - height - minSpacing * 2)) + minSpacing;
+                        x = Math.floor(Math.random() * (sizeX - width - minSpacing * 2)) + minSpacing;
+                        y = Math.floor(Math.random() * (sizeY - height - minSpacing * 2)) + minSpacing;
                         break;
                 }
                 
                 // 确保房间在边界内
-                x = Math.max(minSpacing, Math.min(x, size - width - minSpacing));
-                y = Math.max(minSpacing, Math.min(y, size - height - minSpacing));
+                x = Math.max(minSpacing, Math.min(x, sizeX - width - minSpacing));
+                y = Math.max(minSpacing, Math.min(y, sizeY - height - minSpacing));
                 
                 // 额外检查：确保房间完全在地图范围内
-                if (x < 0 || y < 0 || x + width > size || y + height > size) {
+                if (x < 0 || y < 0 || x + width > sizeX || y + height > sizeY) {
                     continue; // 跳过这个房间，尝试下一个
                 }
                 
@@ -1268,7 +2184,7 @@
                     for (let cy = y - 1; cy < y + height + 1; cy++) {
                         for (let cx = x - 1; cx < x + width + 1; cx++) {
                             if (cy >= 0 && cy < size && cx >= 0 && cx < size) {
-                            if (mapFloors[floor][cy] && mapFloors[floor][cy][cx] === TileType.OUTDOOR) {
+                            if (getTile(cx, cy, floor) === TileType.OUTDOOR) {
                                     canPlace = false;
                                 break;
                             }
@@ -1286,10 +2202,10 @@
                         for (let rx = x; rx < x + width; rx++) {
                             if (ry === y || ry === y + height - 1 || rx === x || rx === x + width - 1) {
                                 // 房间边界墙壁
-                                        mapFloors[floor][ry][rx] = TileType.WALL;
+                                setTile(rx, ry, TileType.WALL, floor);
                                 } else {
                                 // 房间内部地板
-                                mapFloors[floor][ry][rx] = TileType.FLOOR;
+                                setTile(rx, ry, TileType.FLOOR, floor);
                             }
                         }
                     }
@@ -1313,50 +2229,54 @@
         
         // 创建外场区域
         function createOutdoorAreas(size, layout, ratio) {
-            const outdoorSize = parseInt(document.getElementById('outdoorSize').value);
-            const outdoorArea = parseInt(document.getElementById('outdoorArea').value);
-            const sizeMultiplier = [0.5, 1.0, 1.5][outdoorSize]; // 小、中、大
-            const areaMultiplier = [0.3, 0.6, 1.0, 1.5, 2.0][outdoorArea]; // 极小、小、中、大、极大
+            // 外场尺寸/面积参数已移除，使用中性系数
+            const sizeMultiplier = 1.0;
+            const areaMultiplier = 1.0;
             const outdoorTiles = Math.floor(size * size * ratio * sizeMultiplier * areaMultiplier);
+            
+            // 获取实际的地图尺寸
+            const actualSizeY = mapFloors[0] ? mapFloors[0].length : size;
+            const actualSizeX = mapFloors[0] && mapFloors[0][0] ? mapFloors[0][0].length : size;
             
             switch(layout) {
                 case 'outdoor':
                     // 全外场
-                    for (let y = 0; y < size; y++) {
-                        for (let x = 0; x < size; x++) {
-                            mapFloors[0][y][x] = TileType.OUTDOOR;
+                    for (let y = 0; y < actualSizeY; y++) {
+                        for (let x = 0; x < actualSizeX; x++) {
+                            setTile(x, y, TileType.OUTDOOR, 0);
                         }
                     }
                     break;
                     
                 case 'central_outdoor':
                     // 中央外场（规则矩形）
-                    const centerX = Math.floor(size / 2);
-                    const centerY = Math.floor(size / 2);
-                    const areaWidth = Math.floor(size * Math.sqrt(ratio));
-                    const areaHeight = Math.floor(size * Math.sqrt(ratio));
+                    const centerX = Math.floor(actualSizeX / 2);
+                    const centerY = Math.floor(actualSizeY / 2);
+                    const areaWidth = Math.floor(actualSizeX * Math.sqrt(ratio));
+                    const areaHeight = Math.floor(actualSizeY * Math.sqrt(ratio));
                     
                     const startX = Math.max(0, centerX - Math.floor(areaWidth / 2));
-                    const endX = Math.min(size - 1, centerX + Math.floor(areaWidth / 2));
+                    const endX = Math.min(actualSizeX - 1, centerX + Math.floor(areaWidth / 2));
                     const startY = Math.max(0, centerY - Math.floor(areaHeight / 2));
-                    const endY = Math.min(size - 1, centerY + Math.floor(areaHeight / 2));
+                    const endY = Math.min(actualSizeY - 1, centerY + Math.floor(areaHeight / 2));
                     
                     for (let y = startY; y <= endY; y++) {
                         for (let x = startX; x <= endX; x++) {
-                                    mapFloors[0][y][x] = TileType.OUTDOOR;
+                            setTile(x, y, TileType.OUTDOOR, 0);
                         }
                     }
                     break;
                     
                 case 'peripheral_outdoor':
                     // 边缘外场（规则边框）
-                    const margin = Math.floor((1 - Math.sqrt(1 - ratio)) * size / 2);
+                    const marginX = Math.floor((1 - Math.sqrt(1 - ratio)) * actualSizeX / 2);
+                    const marginY = Math.floor((1 - Math.sqrt(1 - ratio)) * actualSizeY / 2);
                     
-                    for (let y = 0; y < size; y++) {
-                        for (let x = 0; x < size; x++) {
-                            if (x < margin || x >= size - margin || 
-                                y < margin || y >= size - margin) {
-                                mapFloors[0][y][x] = TileType.OUTDOOR;
+                    for (let y = 0; y < actualSizeY; y++) {
+                        for (let x = 0; x < actualSizeX; x++) {
+                            if (x < marginX || x >= actualSizeX - marginX || 
+                                y < marginY || y >= actualSizeY - marginY) {
+                                setTile(x, y, TileType.OUTDOOR, 0);
                             }
                         }
                     }
@@ -1374,18 +2294,18 @@
                         let placed = false;
                         
                         // 限制区域大小，避免超出边界
-                        const maxAreaSize = Math.min(areaSize, Math.floor(size / 4));
+                        const maxAreaSize = Math.min(areaSize, Math.floor(Math.min(actualSizeX, actualSizeY) / 4));
                         
                         while (!placed && attempts < 50) {
-                            const cx = Math.floor(Math.random() * (size - maxAreaSize * 2)) + maxAreaSize;
-                            const cy = Math.floor(Math.random() * (size - maxAreaSize * 2)) + maxAreaSize;
+                            const cx = Math.floor(Math.random() * (actualSizeX - maxAreaSize * 2)) + maxAreaSize;
+                            const cy = Math.floor(Math.random() * (actualSizeY - maxAreaSize * 2)) + maxAreaSize;
                         
                             // 检查是否与现有外场区域重叠
                             let overlaps = false;
                             for (let y = cy - maxAreaSize; y <= cy + maxAreaSize; y++) {
                                 for (let x = cx - maxAreaSize; x <= cx + maxAreaSize; x++) {
-                                if (x >= 0 && x < size && y >= 0 && y < size) {
-                                        if (mapFloors[0][y][x] === TileType.OUTDOOR) {
+                                    if (isValidPosition(x, y, 0)) {
+                                        if (getTile(x, y, 0) === TileType.OUTDOOR) {
                                             overlaps = true;
                                             break;
                                         }
@@ -1398,11 +2318,9 @@
                                 // 创建规则矩形外场区域
                                 for (let y = cy - maxAreaSize; y <= cy + maxAreaSize; y++) {
                                     for (let x = cx - maxAreaSize; x <= cx + maxAreaSize; x++) {
-                                        if (x >= 0 && x < size && y >= 0 && y < size) {
-                                        mapFloors[0][y][x] = TileType.OUTDOOR;
+                                        setTile(x, y, TileType.OUTDOOR, 0);
                                     }
                                 }
-                            }
                                 placed = true;
                             }
                             attempts++;
@@ -1411,14 +2329,12 @@
                         // 如果无法放置，在角落创建小区域
                         if (!placed) {
                             const cornerSize = Math.min(maxAreaSize, 10); // 限制角落区域大小
-                            const cornerX = (i % 2 === 0) ? cornerSize : size - cornerSize - 1;
-                            const cornerY = (i < 2) ? cornerSize : size - cornerSize - 1;
+                            const cornerX = (i % 2 === 0) ? cornerSize : actualSizeX - cornerSize - 1;
+                            const cornerY = (i < 2) ? cornerSize : actualSizeY - cornerSize - 1;
                             
                             for (let y = cornerY - cornerSize; y <= cornerY + cornerSize; y++) {
                                 for (let x = cornerX - cornerSize; x <= cornerX + cornerSize; x++) {
-                                    if (x >= 0 && x < size && y >= 0 && y < size) {
-                                        mapFloors[0][y][x] = TileType.OUTDOOR;
-                                    }
+                                    setTile(x, y, TileType.OUTDOOR, 0);
                                 }
                             }
                         }
@@ -1428,6 +2344,36 @@
             
             // 在外场添加一些掩体和特征
             addOutdoorFeatures(size);
+            
+            // 可选：外场围墙，将外场边缘包围为墙
+            const withOutdoorWall = document.getElementById('outdoorWall') && document.getElementById('outdoorWall').checked;
+            if (withOutdoorWall) {
+                addOutdoorWalls();
+            }
+        }
+
+        // 为所有外场区域的边缘添加墙体
+        function addOutdoorWalls() {
+            if (!mapFloors || !mapFloors[0]) return;
+            const height = mapFloors[0].length;
+            const width = mapFloors[0][0].length;
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (getTile(x, y, 0) === TileType.OUTDOOR) {
+                        const neighbors = [
+                            [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]
+                        ];
+                        for (const [nx, ny] of neighbors) {
+                            if (isValidPosition(nx, ny, 0)) {
+                                const t = getTile(nx, ny, 0);
+                                if (t !== TileType.OUTDOOR && t !== TileType.WALL) {
+                                    setTile(nx, ny, TileType.WALL, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         // 生成大厅
@@ -1523,14 +2469,14 @@
                     if (y === lobbyY || y === lobbyY + lobbyHeight - 1 || 
                         x === lobbyX || x === lobbyX + lobbyWidth - 1) {
                         // 墙壁
-                        mapFloors[floor][y][x] = TileType.WALL;
+                        setTile(x, y, TileType.WALL, floor);
                     } else {
                         // 大厅内部
                         if (x === Math.floor(lobbyX + lobbyWidth / 2) && 
                             y === Math.floor(lobbyY + lobbyHeight / 2)) {
-                            mapFloors[floor][y][x] = TileType.LOBBY_CENTER;
+                            setTile(x, y, TileType.LOBBY_CENTER, floor);
                         } else {
-                            mapFloors[floor][y][x] = TileType.LOBBY;
+                            setTile(x, y, TileType.LOBBY, floor);
                         }
                     }
                 }
@@ -1550,13 +2496,13 @@
                     if (distance <= radius) {
                         // 大厅内部
                         if (distance <= 1) {
-                            mapFloors[floor][y][x] = TileType.LOBBY_CENTER;
+                            setTile(x, y, TileType.LOBBY_CENTER, floor);
                         } else {
-                            mapFloors[floor][y][x] = TileType.LOBBY;
+                            setTile(x, y, TileType.LOBBY, floor);
                         }
                     } else if (distance <= radius + 1) {
                         // 墙壁
-                        mapFloors[floor][y][x] = TileType.WALL;
+                        setTile(x, y, TileType.WALL, floor);
                     }
                 }
             }
@@ -1572,7 +2518,7 @@
             // 清空区域
             for (let y = lobbyY; y < lobbyY + lobbyHeight; y++) {
                 for (let x = lobbyX; x < lobbyX + lobbyWidth; x++) {
-                    mapFloors[floor][y][x] = TileType.VOID;
+                    setTile(x, y, TileType.VOID, floor);
                 }
             }
             
@@ -1609,7 +2555,7 @@
             // 添加外部墙壁
             for (let y = lobbyY; y < lobbyY + lobbyHeight; y++) {
                 for (let x = lobbyX; x < lobbyX + lobbyWidth; x++) {
-                    if (mapFloors[floor][y][x] === TileType.VOID) {
+                    if (getTile(x, y, floor) === TileType.VOID) {
                         // 检查是否与大厅内部相邻
                         let adjacentToLobby = false;
                         for (let dy = -1; dy <= 1; dy++) {
@@ -1618,8 +2564,8 @@
                                 const ny = y + dy;
                                 if (nx >= lobbyX && nx < lobbyX + lobbyWidth && 
                                     ny >= lobbyY && ny < lobbyY + lobbyHeight) {
-                                    if (mapFloors[floor][ny][nx] === TileType.LOBBY || 
-                                        mapFloors[floor][ny][nx] === TileType.LOBBY_CENTER) {
+                                    if (getTile(nx, ny, floor) === TileType.LOBBY || 
+                                        getTile(nx, ny, floor) === TileType.LOBBY_CENTER) {
                                         adjacentToLobby = true;
                                         break;
                                     }
@@ -2205,23 +3151,30 @@
             return segments;
         }
         
-        // 洪水填充算法找到连续的道路段
-        function floodFillRoad(x, y, size, floor, visited, segment) {
-            if (x < 0 || x >= size || y < 0 || y >= size || 
-                visited[y][x] || 
-                !mapFloors[floor][y] || mapFloors[floor][y][x] === undefined ||
-                mapFloors[floor][y][x] !== TileType.FLOOR) {
-                return;
+        // 洪水填充算法找到连续的道路段（使用迭代避免栈溢出）
+        function floodFillRoad(startX, startY, size, floor, visited, segment) {
+            const stack = [{x: startX, y: startY}];
+            
+            while (stack.length > 0) {
+                const {x, y} = stack.pop();
+                
+                // 检查边界和条件
+                if (x < 0 || x >= size || y < 0 || y >= size || 
+                    visited[y][x] || 
+                    !mapFloors[floor][y] || mapFloors[floor][y][x] === undefined ||
+                    mapFloors[floor][y][x] !== TileType.FLOOR) {
+                    continue;
+                }
+                
+                visited[y][x] = true;
+                segment.push({x, y});
+                
+                // 向四个方向扩展
+                stack.push({x: x + 1, y: y});
+                stack.push({x: x - 1, y: y});
+                stack.push({x: x, y: y + 1});
+                stack.push({x: x, y: y - 1});
             }
-            
-            visited[y][x] = true;
-            segment.push({x, y});
-            
-            // 向四个方向扩展
-            floodFillRoad(x + 1, y, size, floor, visited, segment);
-            floodFillRoad(x - 1, y, size, floor, visited, segment);
-            floodFillRoad(x, y + 1, size, floor, visited, segment);
-            floodFillRoad(x, y - 1, size, floor, visited, segment);
         }
         
         // 创建高低差区域
@@ -2911,7 +3864,7 @@
         
         // 添加楼梯（改进版：确保与道路连接）
         function addStairs(rooms, stairsCount) {
-            if (totalFloors <= 1) return;
+            if (totalFloors <= 1 || stairsCount === 0) return;
             
             // 为每对相邻楼层创建楼梯
             for (let floor = 0; floor < totalFloors - 1; floor++) {
@@ -3525,9 +4478,69 @@
         
         // 生成地图
         function generateMap() {
-            // 获取游戏模式和地图风格
-            const gameMode = document.getElementById('gameMode').value;
-            const mapStyle = document.getElementById('mapStyle').value;
+            try {
+                // 防重复点击
+                const generateBtn = document.getElementById('generateBtn');
+                if (generateBtn.disabled) {
+                    console.log('地图正在生成中，请稍候...');
+                    return;
+                }
+                
+                console.log('生成地图函数被调用，按钮状态:', generateBtn.disabled);
+                
+                // 禁用按钮并显示生成状态
+                generateBtn.disabled = true;
+                generateBtn.textContent = '生成中...';
+                
+                console.log('开始生成地图...');
+                
+                // 获取地图参数
+                const sizeX = parseInt(document.getElementById('mapSizeX').value);
+                const sizeY = parseInt(document.getElementById('mapSizeY').value);
+                const isLargeMap = (sizeX >= 400 || sizeY >= 400) || (sizeX * sizeY >= 120000);
+                
+                // 对于大地图使用异步处理
+                if (isLargeMap) {
+                    console.log(`检测到大地图 ${sizeX}x${sizeY}，使用异步生成...`);
+                    setTimeout(() => {
+                        try {
+                            generateMapInternal();
+                        } catch (error) {
+                            console.error('异步地图生成失败:', error);
+                            alert('地图生成失败: ' + error.message + '\n请尝试调整参数后重新生成。');
+                        } finally {
+                            // 恢复按钮状态
+                            const generateBtn = document.getElementById('generateBtn');
+                            generateBtn.disabled = false;
+                            generateBtn.textContent = '生成地图';
+                        }
+                    }, 50);
+                    return;
+                }
+                
+                generateMapInternal();
+                
+        function generateMapInternal() {
+                // 获取游戏模式和地图风格
+                const gameMode = document.getElementById('gameMode').value;
+                const mapStyle = document.getElementById('mapStyle').value;
+                
+                // 获取地图参数并进行安全检查
+                const mapSizeX = parseInt(document.getElementById('mapSizeX').value);
+                const mapSizeY = parseInt(document.getElementById('mapSizeY').value);
+                
+                // 限制极大地图的参数以避免性能问题
+                if (mapSizeX > 800 || mapSizeY > 800) {
+                    console.warn(`地图尺寸过大 ${mapSizeX}x${mapSizeY}，可能影响性能`);
+                    // 对大地图调整一些参数
+                    const roomCountSlider = document.getElementById('roomCount');
+                    const currentRoomCount = parseInt(roomCountSlider.value);
+                    if (currentRoomCount > 30) {
+                        console.log(`大地图自动调整房间数量从 ${currentRoomCount} 到 30`);
+                        roomCountSlider.value = 30;
+                        document.getElementById('roomValue').textContent = 30;
+                    }
+                }
             
             // 应用游戏模式设置
             const modeConfig = applyGameMode(gameMode);
@@ -3535,7 +4548,9 @@
             // 应用地图风格设置
             const styleConfig = applyMapStyle(mapStyle);
             
-            const size = parseInt(document.getElementById('mapSize').value);
+            const sizeX = parseInt(document.getElementById('mapSizeX').value);
+            const sizeY = parseInt(document.getElementById('mapSizeY').value);
+            const size = Math.max(sizeX, sizeY); // 向后兼容，使用较大的尺寸
             const floors = parseInt(document.getElementById('floorCount').value);
             const roomCount = parseInt(document.getElementById('roomCount').value);
             const corridorWidth = parseInt(document.getElementById('corridorWidth').value);
@@ -3545,21 +4560,21 @@
             const windowDensity = parseInt(document.getElementById('windowDensity').value);
             
             // 初始化地图
-            initMap(size, floors);
+            initMap(sizeX, sizeY, floors);
             
             // 生成每层的房间
             const allRooms = [];
             for (let floor = 0; floor < floors; floor++) {
-                const rooms = generateRooms(size, roomCount, floor);
+                const rooms = generateRooms(sizeX, sizeY, roomCount, floor);
                 connectRooms(rooms, floor, corridorWidth);
                 
                 // 生成大厅（只在第一层）
                 if (floor === 0) {
-                    generateLobby(size, floor);
+                    generateLobby(Math.max(sizeX, sizeY), floor);
                 }
                 
                 // 生成高低差区域
-                generateElevationAreas(size, floor);
+                generateElevationAreas(Math.max(sizeX, sizeY), floor);
                 
                 // 添加房间填充（在房间内部创建更多小房间）
                 addRoomFilling(rooms, floor);
@@ -3573,13 +4588,82 @@
             // 添加特殊元素
             addSpecialElements(allRooms, coverDensity, waterAmount, windowDensity);
             
+            // 添加狙击长道
+            const longLanesCount = parseInt(document.getElementById('longLanes').value);
+            if (longLanesCount > 0) {
+                addLongLanes(allRooms, longLanesCount);
+            }
+            
+            // 添加暗道
+            const underpassDensity = parseInt(document.getElementById('underpass').value);
+            if (underpassDensity > 0) {
+                addUnderpass(allRooms, underpassDensity);
+            }
+            
             // 创建楼层选择器
             createFloorSelector();
             
             // 重置到第一层
             currentFloor = 0;
             
-            // 绘制叠加视图地图
+            // 绘制地图
+            drawMap();
+            
+            console.log('地图生成完成！');
+            
+            // 对于异步调用，恢复按钮状态
+            const generateBtn = document.getElementById('generateBtn');
+            if (generateBtn.disabled) {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '生成地图';
+            }
+        }
+            
+        } catch (error) {
+            console.error('地图生成失败:', error);
+            alert('地图生成失败: ' + error.message + '\n请尝试调整参数后重新生成。');
+        } finally {
+            // 恢复按钮状态
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = false;
+            generateBtn.textContent = '生成地图';
+        }
+        }
+        
+        // 获取当前主题的canvas背景色
+        function getCanvasBackgroundColor() {
+            const rootStyles = getComputedStyle(document.documentElement);
+            return rootStyles.getPropertyValue('--canvas-bg').trim();
+        }
+        
+        // 获取移动端适配的canvas尺寸
+        function getMobileOptimizedCanvasSize(mapWidth, mapHeight, baseCellSize) {
+            const isMobile = window.innerWidth <= 768;
+            const isSmallMobile = window.innerWidth <= 480;
+            
+            if (!isMobile) {
+                return { cellSize: baseCellSize, maxCanvasSize: 1200 };
+            }
+            
+            // 移动端限制更小的canvas尺寸
+            const maxCanvasSize = isSmallMobile ? 350 : 450;
+            const screenWidth = window.innerWidth - 20; // 减去padding
+            const maxWidth = Math.min(maxCanvasSize, screenWidth);
+            
+            // 计算适合的cellSize
+            let cellSize = baseCellSize;
+            const actualWidth = mapWidth * cellSize;
+            const actualHeight = mapHeight * cellSize;
+            
+            if (actualWidth > maxWidth || actualHeight > maxWidth) {
+                const scale = Math.min(maxWidth / actualWidth, maxWidth / actualHeight);
+                cellSize = Math.max(1, Math.floor(cellSize * scale));
+            }
+            
+            return { cellSize: cellSize, maxCanvasSize: maxWidth };
+        }
+        
+        // 绘制叠加视图地图
         function drawOverlayMap() {
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
@@ -3587,13 +4671,14 @@
             if (!mapFloors[0]) return;
             
             const map = mapFloors[0];
-            const cellSize = 10;
+            const optimizedSize = getMobileOptimizedCanvasSize(map[0].length, map.length, 10);
+            const cellSize = optimizedSize.cellSize;
             
             canvas.width = map[0].length * cellSize;
             canvas.height = map.length * cellSize;
             
             // 清空画布
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = getCanvasBackgroundColor();
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 从底层到顶层绘制，使用透明度
@@ -3757,9 +4842,43 @@
                         }
                     }
                 }
+                
+                // C包点
+                for (let y = 0; y < currentMap.length; y++) {
+                    for (let x = 0; x < currentMap[0].length; x++) {
+                        if (currentMap[y][x] === TileType.BOMBSITE_C) {
+                            ctx.strokeText('C', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            ctx.fillText('C', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            y = currentMap.length;
+                            break;
+                        }
+                    }
+                }
+                
+                // D包点
+                for (let y = 0; y < currentMap.length; y++) {
+                    for (let x = 0; x < currentMap[0].length; x++) {
+                        if (currentMap[y][x] === TileType.BOMBSITE_D) {
+                            ctx.strokeText('D', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            ctx.fillText('D', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            y = currentMap.length;
+                            break;
+                        }
+                    }
+                }
+                
+                // E包点
+                for (let y = 0; y < currentMap.length; y++) {
+                    for (let x = 0; x < currentMap[0].length; x++) {
+                        if (currentMap[y][x] === TileType.BOMBSITE_E) {
+                            ctx.strokeText('E', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            ctx.fillText('E', x * cellSize + Math.floor(cellSize * 1.5) + offset, y * cellSize + Math.floor(cellSize * 2.5) + offset);
+                            y = currentMap.length;
+                            break;
+                        }
+                    }
+                }
             }
-        }
-            drawMap();
         }
         
         // 创建楼层选择器
@@ -3839,7 +4958,9 @@
             if (!mapFloors[currentFloor]) return;
             
             const map = mapFloors[currentFloor];
-            const mapSize = parseInt(document.getElementById('mapSize').value);
+            const mapSizeX = parseInt(document.getElementById('mapSizeX').value);
+            const mapSizeY = parseInt(document.getElementById('mapSizeY').value);
+            const mapSize = Math.max(mapSizeX, mapSizeY); // 使用较大的尺寸来确定格子大小
             
             // 根据地图尺寸动态调整方块大小，使用更小的尺寸减少像素感
             let cellSize;
@@ -3869,7 +4990,7 @@
             canvas.height = map.length * cellSize;
             
             // 清空画布
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = getCanvasBackgroundColor();
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 绘制地图
@@ -3953,13 +5074,13 @@
             
             // 绘制所有包点标记
             for (const [tileType, marker] of Object.entries(bombSiteMarkers)) {
-            for (let y = 0; y < map.length; y++) {
-                for (let x = 0; x < map[0].length; x++) {
+                for (let y = 0; y < map.length; y++) {
+                    for (let x = 0; x < map[0].length; x++) {
                         if (map[y][x] === parseInt(tileType)) {
                             ctx.strokeText(marker, x * cellSize + Math.floor(cellSize * 1.5), y * cellSize + Math.floor(cellSize * 2.5));
                             ctx.fillText(marker, x * cellSize + Math.floor(cellSize * 1.5), y * cellSize + Math.floor(cellSize * 2.5));
-                        y = map.length;
-                        break;
+                            y = map.length;
+                            break;
                         }
                     }
                 }
@@ -3978,7 +5099,9 @@
             if (!mapFloors[0]) return;
             
             const map = mapFloors[0];
-            const mapSize = parseInt(document.getElementById('mapSize').value);
+            const mapSizeX = parseInt(document.getElementById('mapSizeX').value);
+            const mapSizeY = parseInt(document.getElementById('mapSizeY').value);
+            const mapSize = Math.max(mapSizeX, mapSizeY); // 使用较大的尺寸来确定格子大小
             
             // 根据地图尺寸动态调整方块大小，使用更小的尺寸减少像素感
             let cellSize;
@@ -4008,7 +5131,7 @@
             canvas.height = map.length * cellSize;
             
             // 清空画布
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = getCanvasBackgroundColor();
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 从底层到顶层绘制
@@ -4321,7 +5444,8 @@
         // 生成当前参数的唯一种子
         function generateSeed() {
             const params = {
-                mapSize: document.getElementById('mapSize').value,
+                mapSizeX: document.getElementById('mapSizeX').value,
+                mapSizeY: document.getElementById('mapSizeY').value,
                 floorCount: document.getElementById('floorCount').value,
                 roomCount: document.getElementById('roomCount').value,
                 roomSize: document.getElementById('roomSize').value,
@@ -4343,8 +5467,7 @@
                 gameMode: document.getElementById('gameMode').value,
                 mapStyle: document.getElementById('mapStyle').value,
                 outdoorRatio: document.getElementById('outdoorRatio').value,
-                outdoorSize: document.getElementById('outdoorSize').value,
-                outdoorArea: document.getElementById('outdoorArea').value,
+                outdoorWall: document.getElementById('outdoorWall').checked,
                 generateLobby: document.getElementById('generateLobby').value,
                 nadeSpots: document.getElementById('nadeSpots').value,
                 // 常见地形/模块参数
@@ -4379,7 +5502,8 @@
                 seed: seed,
                 date: new Date().toISOString(),
                 params: {
-                    mapSize: document.getElementById('mapSize').value,
+                    mapSizeX: document.getElementById('mapSizeX').value,
+                    mapSizeY: document.getElementById('mapSizeY').value,
                     floorCount: document.getElementById('floorCount').value,
                     roomCount: document.getElementById('roomCount').value,
                     roomSize: document.getElementById('roomSize').value,
@@ -4401,8 +5525,7 @@
                     gameMode: document.getElementById('gameMode').value,
                     mapStyle: document.getElementById('mapStyle').value,
                     outdoorRatio: document.getElementById('outdoorRatio').value,
-                    outdoorSize: document.getElementById('outdoorSize').value,
-                    outdoorArea: document.getElementById('outdoorArea').value,
+                    outdoorWall: document.getElementById('outdoorWall').checked,
                     generateLobby: document.getElementById('generateLobby').value,
                     nadeSpots: document.getElementById('nadeSpots').value,
                     longLane: document.getElementById('longLane').value,
@@ -4474,6 +5597,28 @@
             }
         }
         
+        // 切换种子面板显示/隐藏
+        function toggleSeedsPanel() {
+            const panel = document.querySelector('.seeds-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+        
+        // 隐藏种子面板
+        function hideSeedsPanel() {
+            const panel = document.querySelector('.seeds-panel');
+            panel.style.display = 'none';
+        }
+        
+        // 显示种子面板
+        function showSeedsPanel() {
+            const panel = document.querySelector('.seeds-panel');
+            panel.style.display = 'block';
+        }
+        
         // 渲染种子列表
         function renderSeedsList() {
             const seedsList = document.getElementById('seedsList');
@@ -4493,7 +5638,7 @@
                 
                 // 创建参数摘要
                 const paramSummary = [
-                    `尺寸: ${seed.params.mapSize}`,
+                    `尺寸: ${seed.params.mapSizeX || seed.params.mapSize || '60'} x ${seed.params.mapSizeY || seed.params.mapSize || '60'}`,
                     `层数: ${seed.params.floorCount}`,
                     `房间: ${seed.params.roomCount}`,
                     `掩体: ${seed.params.coverDensity}%`,
@@ -4538,10 +5683,14 @@
             console.log(`楼层${floor}房间填充密度: ${roomFillDensity}, 倍数: ${densityMultiplier}`);
             
             let totalFilledRooms = 0;
+            const maxFillRooms = Math.min(20, rooms.length); // 限制最大填充房间数
+            let processedRooms = 0;
             
             for (let room of rooms) {
-                // 跳过太小的房间
-                if (room.width < 8 || room.height < 8) continue;
+                if (processedRooms >= maxFillRooms) break; // 限制处理数量
+                
+                // 跳过太小的房间或过大的房间（避免性能问题）
+                if (room.width < 8 || room.height < 8 || room.width > 50 || room.height > 50) continue;
                 
                 // 根据密度决定是否填充这个房间
                 if (Math.random() < densityMultiplier) {
@@ -4551,6 +5700,7 @@
                         totalFilledRooms++;
                     }
                 }
+                processedRooms++;
             }
             
             console.log(`楼层${floor}总共填充了${totalFilledRooms}个迷宫房间`);
@@ -4819,6 +5969,483 @@
             }
         }
         
+        // 添加暗道
+        function addUnderpass(rooms, density) {
+            if (!rooms || rooms.length === 0) return;
+            
+            const densityMultiplier = [0, 0.5, 1.0, 1.8, 3.0][density];
+            const totalFloors = mapFloors.length;
+            
+            // 为每层生成暗道
+            for (let floor = 0; floor < totalFloors; floor++) {
+                const floorRooms = rooms.filter(room => room.floor === floor);
+                if (floorRooms.length < 2) continue; // 至少需要2个房间才能连接
+                
+                const mapSize = mapFloors[floor].length;
+                const underpassCount = Math.max(1, Math.floor(floorRooms.length * densityMultiplier / 2));
+                
+                console.log(`楼层${floor}暗道密度: ${density}, 倍数: ${densityMultiplier}, 目标数量: ${underpassCount}`);
+                
+                let createdCount = 0;
+                let attempts = 0;
+                const maxAttempts = underpassCount * 5;
+                
+                // 获取可连接的房间对
+                const connectableRoomPairs = findConnectableRoomPairs(floorRooms, floor);
+                
+                while (createdCount < underpassCount && attempts < maxAttempts && connectableRoomPairs.length > 0) {
+                    attempts++;
+                    
+                    // 随机选择一对房间进行连接
+                    const pairIndex = Math.floor(Math.random() * connectableRoomPairs.length);
+                    const roomPair = connectableRoomPairs[pairIndex];
+                    
+                    if (createUnderpassBetweenRooms(roomPair.room1, roomPair.room2, floor)) {
+                        createdCount++;
+                        // 移除已连接的房间对，避免重复连接
+                        connectableRoomPairs.splice(pairIndex, 1);
+                    }
+                }
+                
+                console.log(`楼层${floor}实际创建暗道数量: ${createdCount}`);
+            }
+        }
+        
+        // 找到可连接的房间对
+        function findConnectableRoomPairs(rooms, floor) {
+            const pairs = [];
+            
+            for (let i = 0; i < rooms.length; i++) {
+                for (let j = i + 1; j < rooms.length; j++) {
+                    const room1 = rooms[i];
+                    const room2 = rooms[j];
+                    
+                    // 计算房间间距离
+                    const distance = Math.sqrt(
+                        Math.pow(room1.x + room1.width/2 - room2.x - room2.width/2, 2) +
+                        Math.pow(room1.y + room1.height/2 - room2.y - room2.height/2, 2)
+                    );
+                    
+                    // 只连接距离适中的房间（不太近也不太远）
+                    if (distance > 8 && distance < 25) {
+                        // 检查两个房间之间是否已经有直接通道连接
+                        if (!hasDirectPath(room1, room2, floor)) {
+                            pairs.push({
+                                room1: room1,
+                                room2: room2,
+                                distance: distance
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // 按距离排序，优先连接距离适中的房间
+            pairs.sort((a, b) => a.distance - b.distance);
+            
+            return pairs;
+        }
+        
+        // 检查两个房间是否已有直接路径连接
+        function hasDirectPath(room1, room2, floor) {
+            // 简化检查：如果两个房间的边界相邻或接近，认为已有连接
+            const room1Center = {x: room1.x + room1.width/2, y: room1.y + room1.height/2};
+            const room2Center = {x: room2.x + room2.width/2, y: room2.y + room2.height/2};
+            
+            // 检查两个房间中心点之间的直线路径上是否都是可通行区域
+            const dx = Math.abs(room2Center.x - room1Center.x);
+            const dy = Math.abs(room2Center.y - room1Center.y);
+            
+            if (dx <= 3 && dy <= 3) {
+                return true; // 房间很近，可能已经连接
+            }
+            
+            return false;
+        }
+        
+        // 在两个房间之间创建暗道
+        function createUnderpassBetweenRooms(room1, room2, floor) {
+            // 找到房间的最佳连接点
+            const connection = findBestConnectionPoints(room1, room2, floor);
+            if (!connection) return false;
+            
+            // 创建暗道路径
+            const path = createUnderpassPath(connection.start, connection.end, floor);
+            if (path.length === 0) return false;
+            
+            // 在路径上创建暗道
+            for (const point of path) {
+                if (point.x >= 0 && point.x < mapFloors[floor][0].length && 
+                    point.y >= 0 && point.y < mapFloors[floor].length) {
+                    const currentTile = mapFloors[floor][point.y][point.x];
+                    
+                    // 只在墙壁或空地中创建暗道
+                    if (currentTile === TileType.WALL || currentTile === TileType.VOID) {
+                        mapFloors[floor][point.y][point.x] = TileType.UNDERPASS;
+                    }
+                }
+            }
+            
+            // 在两端创建与房间的连接点
+            createRoomConnection(connection.start, room1, floor);
+            createRoomConnection(connection.end, room2, floor);
+            
+            return true;
+        }
+        
+        // 找到两个房间的最佳连接点
+        function findBestConnectionPoints(room1, room2, floor) {
+            const room1Center = {x: room1.x + room1.width/2, y: room1.y + room1.height/2};
+            const room2Center = {x: room2.x + room2.width/2, y: room2.y + room2.height/2};
+            
+            // 找到房间边缘的连接点
+            let bestStart = null;
+            let bestEnd = null;
+            let minDistance = Infinity;
+            
+            // 检查房间1的边缘点
+            const room1Points = getRoomEdgePoints(room1);
+            const room2Points = getRoomEdgePoints(room2);
+            
+            for (const p1 of room1Points) {
+                for (const p2 of room2Points) {
+                    const distance = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestStart = p1;
+                        bestEnd = p2;
+                    }
+                }
+            }
+            
+            if (bestStart && bestEnd && minDistance > 5) { // 确保有足够距离创建暗道
+                return {start: bestStart, end: bestEnd};
+            }
+            
+            return null;
+        }
+        
+        // 获取房间边缘点
+        function getRoomEdgePoints(room) {
+            const points = [];
+            
+            // 房间四个边的中点
+            points.push({x: room.x + room.width/2, y: room.y}); // 上
+            points.push({x: room.x + room.width/2, y: room.y + room.height}); // 下
+            points.push({x: room.x, y: room.y + room.height/2}); // 左
+            points.push({x: room.x + room.width, y: room.y + room.height/2}); // 右
+            
+            // 四个角点
+            points.push({x: room.x, y: room.y}); // 左上
+            points.push({x: room.x + room.width, y: room.y}); // 右上
+            points.push({x: room.x, y: room.y + room.height}); // 左下
+            points.push({x: room.x + room.width, y: room.y + room.height}); // 右下
+            
+            return points.map(p => ({x: Math.floor(p.x), y: Math.floor(p.y)}));
+        }
+        
+        // 创建暗道路径
+        function createUnderpassPath(start, end, floor) {
+            const path = [];
+            
+            // 使用L形路径（先水平后垂直，或先垂直后水平）
+            const useHorizontalFirst = Math.random() > 0.5;
+            
+            if (useHorizontalFirst) {
+                // 先水平移动
+                const startX = Math.min(start.x, end.x);
+                const endX = Math.max(start.x, end.x);
+                for (let x = startX; x <= endX; x++) {
+                    path.push({x: x, y: start.y});
+                }
+                
+                // 再垂直移动
+                const startY = Math.min(start.y, end.y);
+                const endY = Math.max(start.y, end.y);
+                for (let y = startY; y <= endY; y++) {
+                    path.push({x: end.x, y: y});
+                }
+            } else {
+                // 先垂直移动
+                const startY = Math.min(start.y, end.y);
+                const endY = Math.max(start.y, end.y);
+                for (let y = startY; y <= endY; y++) {
+                    path.push({x: start.x, y: y});
+                }
+                
+                // 再水平移动
+                const startX = Math.min(start.x, end.x);
+                const endX = Math.max(start.x, end.x);
+                for (let x = startX; x <= endX; x++) {
+                    path.push({x: x, y: end.y});
+                }
+            }
+            
+            return path;
+        }
+        
+        // 创建暗道与房间的连接
+        function createRoomConnection(connectionPoint, room, floor) {
+            // 在连接点附近的房间内创建暗道入口
+            const roomMinX = Math.max(0, room.x + 1);
+            const roomMaxX = Math.min(mapFloors[floor][0].length - 1, room.x + room.width - 1);
+            const roomMinY = Math.max(0, room.y + 1);
+            const roomMaxY = Math.min(mapFloors[floor].length - 1, room.y + room.height - 1);
+            
+            // 找到最接近连接点的房间内位置
+            let bestRoomPoint = null;
+            let minDistance = Infinity;
+            
+            for (let y = roomMinY; y <= roomMaxY; y++) {
+                for (let x = roomMinX; x <= roomMaxX; x++) {
+                    const currentTile = mapFloors[floor][y][x];
+                    if (currentTile === TileType.FLOOR || 
+                        currentTile === TileType.MEDIUM_GROUND ||
+                        currentTile === TileType.HIGH_GROUND ||
+                        currentTile === TileType.LOW_GROUND) {
+                        
+                        const distance = Math.sqrt(
+                            Math.pow(x - connectionPoint.x, 2) + 
+                            Math.pow(y - connectionPoint.y, 2)
+                        );
+                        
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            bestRoomPoint = {x: x, y: y};
+                        }
+                    }
+                }
+            }
+            
+            // 创建从暗道到房间的连接通道
+            if (bestRoomPoint) {
+                const dx = Math.abs(bestRoomPoint.x - connectionPoint.x);
+                const dy = Math.abs(bestRoomPoint.y - connectionPoint.y);
+                
+                if (dx <= 2 && dy <= 2) {
+                    // 直接连接
+                    const connectX = Math.floor((bestRoomPoint.x + connectionPoint.x) / 2);
+                    const connectY = Math.floor((bestRoomPoint.y + connectionPoint.y) / 2);
+                    
+                    if (connectX >= 0 && connectX < mapFloors[floor][0].length && 
+                        connectY >= 0 && connectY < mapFloors[floor].length) {
+                        mapFloors[floor][connectY][connectX] = TileType.UNDERPASS;
+                    }
+                }
+            }
+        }
+        
+        // 检查是否可以放置暗道
+        function canPlaceUnderpass(x1, y1, x2, y2, floor) {
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            
+            // 检查暗道路径上的每个位置
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (x < 0 || x >= mapFloors[floor][0].length || 
+                        y < 0 || y >= mapFloors[floor].length) {
+                        return false;
+                    }
+                    
+                    const currentTile = mapFloors[floor][y][x];
+                    // 只能在墙壁或空地中创建暗道
+                    if (currentTile !== TileType.WALL && currentTile !== TileType.VOID) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        // 创建暗道隧道
+        function createUnderpassTunnel(x1, y1, x2, y2, floor) {
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            
+            // 创建暗道通道
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (x >= 0 && x < mapFloors[floor][0].length && 
+                        y >= 0 && y < mapFloors[floor].length) {
+                        mapFloors[floor][y][x] = TileType.UNDERPASS;
+                    }
+                }
+            }
+            
+            // 在暗道两端创建入口（连接到邻近的可通行区域）
+            const endpoints = [
+                {x: x1, y: y1},
+                {x: x2, y: y2}
+            ];
+            
+            for (const endpoint of endpoints) {
+                createUnderpassEntrance(endpoint.x, endpoint.y, floor);
+            }
+        }
+        
+        // 创建暗道入口
+        function createUnderpassEntrance(x, y, floor) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            for (const [dx, dy] of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+                
+                if (nx >= 0 && nx < mapFloors[floor][0].length && 
+                    ny >= 0 && ny < mapFloors[floor].length) {
+                    
+                    const neighborTile = mapFloors[floor][ny][nx];
+                    
+                    // 如果邻近位置是可通行区域，创建连接
+                    if (neighborTile === TileType.FLOOR || 
+                        neighborTile === TileType.MEDIUM_GROUND ||
+                        neighborTile === TileType.HIGH_GROUND ||
+                        neighborTile === TileType.LOW_GROUND) {
+                        
+                        // 在暗道和可通行区域之间创建连接点
+                        const midX = Math.floor((x + nx) / 2);
+                        const midY = Math.floor((y + ny) / 2);
+                        
+                        if (midX >= 0 && midX < mapFloors[floor][0].length && 
+                            midY >= 0 && midY < mapFloors[floor].length) {
+                            mapFloors[floor][midY][midX] = TileType.UNDERPASS;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 添加狙击长道
+        function addLongLanes(rooms, count) {
+            if (!rooms || rooms.length === 0 || count <= 0) return;
+            
+            console.log(`开始生成${count}条狙击长道`);
+            
+            let createdLanes = 0;
+            const maxAttempts = count * 10;
+            let attempts = 0;
+            
+            // 为每层尝试生成长道
+            for (let floor = 0; floor < totalFloors && createdLanes < count; floor++) {
+                const floorRooms = rooms.filter(room => room.floor === floor);
+                if (floorRooms.length < 2) continue;
+                
+                attempts = 0;
+                while (createdLanes < count && attempts < maxAttempts) {
+                    attempts++;
+                    
+                    // 随机选择长道方向：水平或垂直
+                    const isHorizontal = Math.random() > 0.5;
+                    
+                    if (createLongLane(floor, isHorizontal)) {
+                        createdLanes++;
+                        console.log(`成功创建第${createdLanes}条长道 (楼层${floor}, ${isHorizontal ? '水平' : '垂直'})`);
+                    }
+                }
+            }
+            
+            console.log(`总共创建了${createdLanes}条狙击长道`);
+        }
+        
+        // 创建单条狙击长道
+        function createLongLane(floor, isHorizontal) {
+            if (!mapFloors[floor]) return false;
+            
+            const mapHeight = mapFloors[floor].length;
+            const mapWidth = mapFloors[floor][0] ? mapFloors[floor][0].length : 0;
+            
+            if (mapWidth === 0 || mapHeight === 0) return false;
+            
+            const minLength = 15; // 最小长道长度
+            const maxLength = Math.min(isHorizontal ? mapWidth - 10 : mapHeight - 10, 40); // 最大长度
+            
+            if (maxLength < minLength) return false;
+            
+            const length = minLength + Math.floor(Math.random() * (maxLength - minLength));
+            const width = 3; // 长道宽度
+            
+            let startX, startY;
+            
+            if (isHorizontal) {
+                // 水平长道
+                startX = Math.floor(Math.random() * (mapWidth - length - 5)) + 3;
+                startY = Math.floor(Math.random() * (mapHeight - width - 5)) + 3;
+                
+                // 检查区域是否可用
+                if (!isAreaClearForLongLane(startX, startY, length, width, floor)) {
+                    return false;
+                }
+                
+                // 创建水平长道
+                for (let x = startX; x < startX + length; x++) {
+                    for (let y = startY; y < startY + width; y++) {
+                        if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && 
+                            mapFloors[floor][y] && mapFloors[floor][y][x] !== undefined) {
+                            mapFloors[floor][y][x] = TileType.LONG_LANE;
+                        }
+                    }
+                }
+            } else {
+                // 垂直长道
+                startX = Math.floor(Math.random() * (mapWidth - width - 5)) + 3;
+                startY = Math.floor(Math.random() * (mapHeight - length - 5)) + 3;
+                
+                // 检查区域是否可用
+                if (!isAreaClearForLongLane(startX, startY, width, length, floor)) {
+                    return false;
+                }
+                
+                // 创建垂直长道
+                for (let x = startX; x < startX + width; x++) {
+                    for (let y = startY; y < startY + length; y++) {
+                        if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && 
+                            mapFloors[floor][y] && mapFloors[floor][y][x] !== undefined) {
+                            mapFloors[floor][y][x] = TileType.LONG_LANE;
+                        }
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        // 检查区域是否可以放置长道
+        function isAreaClearForLongLane(startX, startY, width, height, floor) {
+            if (!mapFloors[floor]) return false;
+            
+            const mapHeight = mapFloors[floor].length;
+            const mapWidth = mapFloors[floor][0] ? mapFloors[floor][0].length : 0;
+            
+            for (let x = startX; x < startX + width; x++) {
+                for (let y = startY; y < startY + height; y++) {
+                    if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
+                        return false;
+                    }
+                    
+                    if (!mapFloors[floor][y] || mapFloors[floor][y][x] === undefined) {
+                        return false;
+                    }
+                    
+                    const currentTile = mapFloors[floor][y][x];
+                    
+                    // 只能在空地、墙壁或地板上建造长道
+                    if (currentTile !== TileType.VOID && 
+                        currentTile !== TileType.WALL && 
+                        currentTile !== TileType.FLOOR &&
+                        currentTile !== TileType.MEDIUM_GROUND) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
 
         
         // 添加阴点（垂直小墙体）
@@ -4934,8 +6561,66 @@
             }
         }
         
+        // 主题切换功能
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            const themeIcon = themeToggle.querySelector('.theme-icon');
+            const themeText = themeToggle.querySelector('.theme-text');
+            
+            if (body.getAttribute('data-theme') === 'light') {
+                // 切换到深色主题
+                body.removeAttribute('data-theme');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = '深色';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                // 切换到浅色主题
+                body.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = '浅色';
+                localStorage.setItem('theme', 'light');
+            }
+            
+            // 重新绘制地图以适应新主题
+            if (typeof drawMap === 'function') {
+                if (overlayMode) {
+                    drawOverlayMap();
+                } else {
+                    drawMap();
+                }
+            }
+            
+            // 更新3D场景背景色（如果3D预览正在运行）
+            if (scene3D) {
+                const isLightTheme = body.getAttribute('data-theme') === 'light';
+                scene3D.background = new THREE.Color(isLightTheme ? 0xf5f5f5 : 0x0a0a0a);
+            }
+        }
+        
+        // 初始化主题
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle');
+            const themeIcon = themeToggle.querySelector('.theme-icon');
+            const themeText = themeToggle.querySelector('.theme-text');
+            
+            if (savedTheme === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = '浅色';
+            } else {
+                // 默认深色主题
+                themeIcon.textContent = '🌙';
+                themeText.textContent = '深色';
+            }
+        }
+        
         // 初始化
         window.addEventListener('DOMContentLoaded', function() {
+            // 初始化主题
+            initializeTheme();
+            
             document.getElementById('generateBtn').addEventListener('click', generateMap);
             document.getElementById('randomBtn').addEventListener('click', function() {
                 randomizeParameters();
@@ -4946,10 +6631,1102 @@
             // 种子系统事件监听器
             document.getElementById('saveSeedBtn').addEventListener('click', saveCurrentSeed);
             document.getElementById('clearSeedsBtn').addEventListener('click', clearAllSeeds);
+            document.getElementById('seedsPanelCloseBtn').addEventListener('click', hideSeedsPanel);
             
             // 加载保存的种子
             loadSeedsFromStorage();
             renderSeedsList();
+        });
+
+        // ==================== 3D预览功能 ====================
+        
+        // 打开3D预览
+        function open3DPreview() {
+            if (!mapFloors.length) {
+                alert('请先生成地图！');
+                return;
+            }
+            
+            // 检查Three.js是否加载
+            if (typeof THREE === 'undefined') {
+                alert('Three.js库未能正确加载，请刷新页面重试！');
+                return;
+            }
+            
+            const container = document.getElementById('preview3DContainer');
+            container.style.display = 'block';
+            preview3DActive = true;
+            
+            try {
+                // 更新状态
+                document.getElementById('debug3DStatus').textContent = '正在初始化场景...';
+                document.getElementById('controlStatus').textContent = '🔧 正在加载控制器...';
+                
+                // 初始化3D场景
+                init3DScene();
+                render3DMap();
+                
+                // 更新成功状态
+                document.getElementById('debug3DStatus').textContent = '场景加载完成';
+                console.log('3D预览初始化成功');
+            } catch (error) {
+                console.error('3D预览初始化失败:', error);
+                document.getElementById('debug3DStatus').textContent = '初始化失败: ' + error.message;
+                alert('3D预览初始化失败: ' + error.message);
+                close3DPreview();
+            }
+        }
+        
+        // 关闭3D预览
+        function close3DPreview() {
+            const container = document.getElementById('preview3DContainer');
+            container.style.display = 'none';
+            preview3DActive = false;
+            
+            // 清理3D资源
+            if (renderer3D) {
+                renderer3D.dispose();
+                renderer3D = null;
+            }
+            if (scene3D) {
+                // 清理场景中的所有对象
+                while(scene3D.children.length > 0) {
+                    const child = scene3D.children[0];
+                    scene3D.remove(child);
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(material => material.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+                scene3D = null;
+            }
+            camera3D = null;
+            controls3D = null;
+        }
+        
+        // 初始化3D场景
+        function init3DScene() {
+            const canvas3D = document.getElementById('preview3DCanvas');
+            canvas3D.innerHTML = ''; // 清空容器
+            
+            // 创建场景
+            scene3D = new THREE.Scene();
+            
+            // 根据当前主题设置背景颜色
+            const isLightTheme = document.body.getAttribute('data-theme') === 'light';
+            scene3D.background = new THREE.Color(isLightTheme ? 0xf5f5f5 : 0x0a0a0a);
+            
+            // 创建相机
+            const mapSize = mapFloors[0].length;
+            camera3D = new THREE.PerspectiveCamera(
+                75, 
+                canvas3D.clientWidth / canvas3D.clientHeight, 
+                0.1, 
+                1000
+            );
+            
+            // 设置相机位置 - 从斜上方观察
+            const cameraDistance = mapSize * 1.5;
+            camera3D.position.set(cameraDistance, cameraDistance * 0.8, cameraDistance);
+            mapCenter.set(mapSize / 2, 0, mapSize / 2);
+            camera3D.lookAt(mapCenter);
+            
+            // 创建渲染器
+            renderer3D = new THREE.WebGLRenderer({ antialias: true });
+            renderer3D.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+            renderer3D.shadowMap.enabled = true;
+            renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
+            canvas3D.appendChild(renderer3D.domElement);
+            
+            // 添加轨道控制器
+            try {
+                if (typeof THREE.OrbitControls !== 'undefined') {
+                    controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+                    controls3D.enableDamping = true;
+                    controls3D.dampingFactor = 0.1;
+                    controls3D.target.set(mapSize / 2, 0, mapSize / 2);
+                    controls3D.maxDistance = mapSize * 5;
+                    controls3D.minDistance = 5;
+                    
+                    // 双击重置视角
+                    renderer3D.domElement.addEventListener('dblclick', () => {
+                        camera3D.position.set(cameraDistance, cameraDistance * 0.8, cameraDistance);
+                        controls3D.target.set(mapSize / 2, 0, mapSize / 2);
+                        controls3D.update();
+                    });
+                    
+                    console.log('OrbitControls加载成功');
+                    document.getElementById('controlStatus').textContent = '✅ OrbitControls已就绪';
+                } else {
+                    console.warn('OrbitControls未加载，使用基础控制');
+                    addBasicControls();
+                    document.getElementById('controlStatus').textContent = '⚠️ 使用基础控制';
+                }
+            } catch (error) {
+                console.error('OrbitControls初始化失败:', error);
+                addBasicControls();
+                document.getElementById('controlStatus').textContent = '⚠️ 使用基础控制';
+            }
+            
+            // 添加光照
+            add3DLighting();
+            
+            // 处理窗口大小变化
+            const resizeHandler = () => {
+                if (preview3DActive && renderer3D && camera3D) {
+                    camera3D.aspect = canvas3D.clientWidth / canvas3D.clientHeight;
+                    camera3D.updateProjectionMatrix();
+                    renderer3D.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+                }
+            };
+            window.addEventListener('resize', resizeHandler);
+            
+            // 添加键盘和预设视角支持
+            addKeyboardControls();
+            addPresetViewControls();
+            addTouchControls();
+            
+            // 动画循环
+            function animate() {
+                if (preview3DActive && renderer3D && scene3D && camera3D) {
+                    requestAnimationFrame(animate);
+                    
+                    // 更新相机动画
+                    updateCameraAnimation();
+                    
+                    // 更新帧率计数
+                    updateFPSCounter();
+                    
+                    if (controls3D && controls3D.update) {
+                        controls3D.update();
+                    }
+                    renderer3D.render(scene3D, camera3D);
+                }
+            }
+            animate();
+        }
+        
+        // 添加基础控制（OrbitControls的备用方案）
+        function addBasicControls() {
+            const canvas = renderer3D.domElement;
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            // 鼠标控制变量
+            let rotationSpeed = 0.01;
+            let zoomSpeed = 0.1;
+            
+            // 鼠标按下
+            canvas.addEventListener('mousedown', (event) => {
+                isDragging = true;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+            
+            // 鼠标移动
+            canvas.addEventListener('mousemove', (event) => {
+                if (!isDragging) return;
+                
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+                
+                // 旋转相机
+                const spherical = new THREE.Spherical();
+                spherical.setFromVector3(camera3D.position);
+                
+                spherical.theta -= deltaX * rotationSpeed;
+                spherical.phi += deltaY * rotationSpeed;
+                
+                // 限制垂直旋转角度
+                spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                
+                camera3D.position.setFromSpherical(spherical);
+                camera3D.lookAt(mapFloors[0].length / 2, 0, mapFloors[0].length / 2);
+                
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+            
+            // 鼠标抬起
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            // 滚轮缩放
+            canvas.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                
+                const direction = event.deltaY > 0 ? 1 : -1;
+                const distance = camera3D.position.length();
+                const newDistance = Math.max(5, Math.min(mapFloors[0].length * 5, distance + direction * zoomSpeed * distance));
+                
+                camera3D.position.normalize().multiplyScalar(newDistance);
+            });
+            
+            // 双击重置
+            canvas.addEventListener('dblclick', () => {
+                const mapSize = mapFloors[0].length;
+                const cameraDistance = mapSize * 1.5;
+                camera3D.position.set(cameraDistance, cameraDistance * 0.8, cameraDistance);
+                camera3D.lookAt(mapSize / 2, 0, mapSize / 2);
+            });
+        }
+        
+        // ==================== 增强控制功能 ====================
+        
+        // 添加键盘控制
+        function addKeyboardControls() {
+            document.addEventListener('keydown', (event) => {
+                if (!preview3DActive) return;
+                
+                const moveSpeed = 5;
+                const rotateSpeed = 0.1;
+                
+                switch(event.code) {
+                    case 'KeyR':
+                        animateToView('perspective');
+                        break;
+                    case 'KeyF':
+                        focusOnMap();
+                        break;
+                    case 'Digit1':
+                        animateToView('top');
+                        break;
+                    case 'Digit2':
+                        animateToView('isometric');
+                        break;
+                    case 'Digit3':
+                        animateToView('perspective');
+                        break;
+                    case 'Digit4':
+                        animateToView('walk');
+                        break;
+                    case 'Equal':
+                    case 'NumpadAdd':
+                        zoomCamera(-0.1);
+                        break;
+                    case 'Minus':
+                    case 'NumpadSubtract':
+                        zoomCamera(0.1);
+                        break;
+                    case 'ArrowUp':
+                        moveCamera(0, 0, -moveSpeed);
+                        break;
+                    case 'ArrowDown':
+                        moveCamera(0, 0, moveSpeed);
+                        break;
+                    case 'ArrowLeft':
+                        moveCamera(-moveSpeed, 0, 0);
+                        break;
+                    case 'ArrowRight':
+                        moveCamera(moveSpeed, 0, 0);
+                        break;
+                    case 'Escape':
+                        close3DPreview();
+                        break;
+                }
+                
+                event.preventDefault();
+            });
+        }
+        
+        // 添加预设视角控制
+        function addPresetViewControls() {
+            document.getElementById('topViewBtn').addEventListener('click', () => animateToView('top'));
+            document.getElementById('isometricViewBtn').addEventListener('click', () => animateToView('isometric'));
+            document.getElementById('perspectiveViewBtn').addEventListener('click', () => animateToView('perspective'));
+            document.getElementById('walkViewBtn').addEventListener('click', () => animateToView('walk'));
+        }
+        
+        // 添加触摸控制
+        function addTouchControls() {
+            const canvas = renderer3D.domElement;
+            
+            // 触摸开始
+            canvas.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                touches = {};
+                
+                for (let i = 0; i < event.touches.length; i++) {
+                    const touch = event.touches[i];
+                    touches[touch.identifier] = {
+                        x: touch.clientX,
+                        y: touch.clientY
+                    };
+                }
+                
+                // 双指触摸
+                if (event.touches.length === 2) {
+                    const touch1 = event.touches[0];
+                    const touch2 = event.touches[1];
+                    
+                    touchStartDistance = Math.hypot(
+                        touch2.clientX - touch1.clientX,
+                        touch2.clientY - touch1.clientY
+                    );
+                    
+                    touchStartCenter = {
+                        x: (touch1.clientX + touch2.clientX) / 2,
+                        y: (touch1.clientY + touch2.clientY) / 2
+                    };
+                }
+            });
+            
+            // 触摸移动
+            canvas.addEventListener('touchmove', (event) => {
+                event.preventDefault();
+                
+                if (event.touches.length === 1) {
+                    // 单指旋转
+                    const touch = event.touches[0];
+                    const prevTouch = touches[touch.identifier];
+                    
+                    if (prevTouch) {
+                        const deltaX = touch.clientX - prevTouch.x;
+                        const deltaY = touch.clientY - prevTouch.y;
+                        
+                        rotateCamera(deltaX * 0.01, deltaY * 0.01);
+                        
+                        touches[touch.identifier] = {
+                            x: touch.clientX,
+                            y: touch.clientY
+                        };
+                    }
+                } else if (event.touches.length === 2) {
+                    // 双指缩放和平移
+                    const touch1 = event.touches[0];
+                    const touch2 = event.touches[1];
+                    
+                    const currentDistance = Math.hypot(
+                        touch2.clientX - touch1.clientX,
+                        touch2.clientY - touch1.clientY
+                    );
+                    
+                    const currentCenter = {
+                        x: (touch1.clientX + touch2.clientX) / 2,
+                        y: (touch1.clientY + touch2.clientY) / 2
+                    };
+                    
+                    // 缩放
+                    if (touchStartDistance > 0) {
+                        const scale = currentDistance / touchStartDistance;
+                        const zoomDelta = (1 - scale) * 0.5;
+                        zoomCamera(zoomDelta);
+                    }
+                    
+                    // 平移
+                    const panDeltaX = currentCenter.x - touchStartCenter.x;
+                    const panDeltaY = currentCenter.y - touchStartCenter.y;
+                    panCamera(panDeltaX * 0.01, panDeltaY * 0.01);
+                    
+                    touchStartDistance = currentDistance;
+                    touchStartCenter = currentCenter;
+                }
+            });
+            
+            // 触摸结束
+            canvas.addEventListener('touchend', (event) => {
+                event.preventDefault();
+                
+                // 清理结束的触摸点
+                for (let i = 0; i < event.changedTouches.length; i++) {
+                    const touch = event.changedTouches[i];
+                    delete touches[touch.identifier];
+                }
+            });
+        }
+        
+        // 动画到指定视角
+        function animateToView(viewType) {
+            if (!mapFloors.length || cameraAnimating) return;
+            
+            const mapSize = mapFloors[0].length;
+            const distance = mapSize * 1.5;
+            let newPosition = new THREE.Vector3();
+            let newLookAt = mapCenter.clone();
+            
+            // 更新预设视角按钮状态
+            document.querySelectorAll('.preset-view-btn').forEach(btn => btn.classList.remove('active'));
+            
+            switch(viewType) {
+                case 'top':
+                    newPosition.set(mapSize / 2, distance, mapSize / 2);
+                    document.getElementById('topViewBtn').classList.add('active');
+                    break;
+                case 'isometric':
+                    newPosition.set(distance, distance * 0.6, distance);
+                    document.getElementById('isometricViewBtn').classList.add('active');
+                    break;
+                case 'perspective':
+                    newPosition.set(distance, distance * 0.8, distance);
+                    document.getElementById('perspectiveViewBtn').classList.add('active');
+                    break;
+                case 'walk':
+                    newPosition.set(mapSize / 2, 3, mapSize / 4);
+                    newLookAt.set(mapSize / 2, 0, mapSize * 0.75);
+                    document.getElementById('walkViewBtn').classList.add('active');
+                    break;
+            }
+            
+            currentPresetView = viewType;
+            smoothCameraTransition(newPosition, newLookAt);
+        }
+        
+        // 平滑相机过渡
+        function smoothCameraTransition(targetPos, targetLook, duration = 1000) {
+            if (cameraAnimating) return;
+            
+            cameraAnimating = true;
+            const startPos = camera3D.position.clone();
+            const startLook = new THREE.Vector3();
+            camera3D.getWorldDirection(startLook);
+            startLook.add(camera3D.position);
+            
+            const startTime = Date.now();
+            
+            function animateCamera() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // 使用缓动函数
+                const easeProgress = easeInOutCubic(progress);
+                
+                // 插值位置
+                camera3D.position.lerpVectors(startPos, targetPos, easeProgress);
+                
+                // 插值朝向
+                const currentLook = new THREE.Vector3();
+                currentLook.lerpVectors(startLook, targetLook, easeProgress);
+                camera3D.lookAt(currentLook);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                } else {
+                    cameraAnimating = false;
+                }
+            }
+            
+            animateCamera();
+        }
+        
+        // 缓动函数
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+        }
+        
+        // 聚焦到地图中心
+        function focusOnMap() {
+            smoothCameraTransition(camera3D.position, mapCenter);
+        }
+        
+        // 缩放相机
+        function zoomCamera(delta) {
+            const direction = camera3D.position.clone().sub(mapCenter).normalize();
+            const distance = camera3D.position.distanceTo(mapCenter);
+            const newDistance = Math.max(5, Math.min(mapFloors[0].length * 5, distance + delta * distance));
+            
+            const newPosition = mapCenter.clone().add(direction.multiplyScalar(newDistance));
+            camera3D.position.copy(newPosition);
+        }
+        
+        // 移动相机
+        function moveCamera(deltaX, deltaY, deltaZ) {
+            const moveVector = new THREE.Vector3(deltaX, deltaY, deltaZ);
+            camera3D.position.add(moveVector);
+            mapCenter.add(moveVector);
+        }
+        
+        // 旋转相机
+        function rotateCamera(deltaX, deltaY) {
+            const spherical = new THREE.Spherical();
+            spherical.setFromVector3(camera3D.position.clone().sub(mapCenter));
+            
+            spherical.theta -= deltaX;
+            spherical.phi += deltaY;
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            
+            camera3D.position.setFromSpherical(spherical).add(mapCenter);
+            camera3D.lookAt(mapCenter);
+        }
+        
+        // 平移相机
+        function panCamera(deltaX, deltaY) {
+            const panVector = new THREE.Vector3();
+            camera3D.getWorldDirection(panVector);
+            
+            const right = new THREE.Vector3();
+            right.crossVectors(panVector, camera3D.up).normalize();
+            
+            const up = new THREE.Vector3();
+            up.crossVectors(right, panVector).normalize();
+            
+            const moveVector = new THREE.Vector3();
+            moveVector.addScaledVector(right, -deltaX);
+            moveVector.addScaledVector(up, deltaY);
+            
+            camera3D.position.add(moveVector);
+            mapCenter.add(moveVector);
+        }
+        
+        // 更新相机动画
+        function updateCameraAnimation() {
+            // 这里可以添加更多相机动画逻辑
+        }
+        
+        // 更新帧率计数器
+        function updateFPSCounter() {
+            frameCount++;
+            const now = Date.now();
+            
+            if (now - lastFPSUpdate >= 1000) {
+                const fps = Math.round((frameCount * 1000) / (now - lastFPSUpdate));
+                document.getElementById('fpsCounter').textContent = fps + ' FPS';
+                frameCount = 0;
+                lastFPSUpdate = now;
+            }
+        }
+        
+        // 添加3D光照
+        function add3DLighting() {
+            // 环境光
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene3D.add(ambientLight);
+            
+            // 主要方向光
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 500;
+            directionalLight.shadow.camera.left = -100;
+            directionalLight.shadow.camera.right = 100;
+            directionalLight.shadow.camera.top = 100;
+            directionalLight.shadow.camera.bottom = -100;
+            scene3D.add(directionalLight);
+            
+            // 辅助光源
+            const pointLight = new THREE.PointLight(0x6699ff, 0.3, 100);
+            pointLight.position.set(-20, 30, 20);
+            scene3D.add(pointLight);
+        }
+        
+        // 渲染3D地图（优化版本 - 合并相邻方块）
+        function render3DMap() {
+            if (!scene3D || !mapFloors.length) return;
+            
+            const floorHeight = 4; // 每层的高度
+            
+            // 为每层创建优化的3D几何体
+            for (let floor = 0; floor < totalFloors; floor++) {
+                const currentMap = mapFloors[floor];
+                const yOffset = floor * floorHeight;
+                
+                // 创建合并的几何体
+                createMergedGeometry(currentMap, yOffset, floor);
+            }
+            
+            // 计算性能统计
+            const objectCount = scene3D.children.length;
+            let totalTriangles = 0;
+            
+            scene3D.children.forEach(child => {
+                if (child.geometry) {
+                    const geometry = child.geometry;
+                    if (geometry.index) {
+                        totalTriangles += geometry.index.count / 3;
+                    } else if (geometry.attributes.position) {
+                        totalTriangles += geometry.attributes.position.count / 3;
+                    }
+                }
+            });
+            
+            const perfMessage = `3D渲染完成 - 对象: ${objectCount}, 三角形: ${Math.floor(totalTriangles)}`;
+            console.log(perfMessage);
+            
+            // 更新状态显示
+            document.getElementById('debug3DStatus').textContent = 
+                `已渲染 ${objectCount} 个对象，${Math.floor(totalTriangles)} 个三角形`;
+        }
+        
+        // 创建合并几何体（性能优化的核心）
+        function createMergedGeometry(mapData, yOffset, floor) {
+            // 按材质类型分组瓦片
+            const tileGroups = groupTilesByType(mapData, floor);
+            
+            // 为每种瓦片类型创建合并的几何体
+            Object.keys(tileGroups).forEach(tileType => {
+                const tiles = tileGroups[tileType];
+                if (tiles.length === 0) return;
+                
+                const mergedMesh = createMergedMesh(tiles, parseInt(tileType), yOffset, floor);
+                if (mergedMesh) {
+                    scene3D.add(mergedMesh);
+                }
+            });
+        }
+        
+        // 按瓦片类型分组
+        function groupTilesByType(mapData, floor) {
+            const groups = {};
+            
+            for (let z = 0; z < mapData.length; z++) {
+                for (let x = 0; x < mapData[0].length; x++) {
+                    const tileType = mapData[z][x];
+                    
+                    if (tileType !== TileType.VOID) {
+                        if (!groups[tileType]) {
+                            groups[tileType] = [];
+                        }
+                        groups[tileType].push({ x, z });
+                    }
+                }
+            }
+            
+            return groups;
+        }
+        
+        // 创建合并网格
+        function createMergedMesh(tiles, tileType, yOffset, floor) {
+            const { geometry: baseGeometry, material } = get3DTileProperties(tileType, floor);
+            if (!baseGeometry || !material) return null;
+            
+            // 对于可以平铺合并的类型（地板、墙壁等），使用区域合并
+            if (canMergeTiles(tileType)) {
+                return createMergedPlanarMesh(tiles, tileType, yOffset, floor, material);
+            } else {
+                // 对于特殊形状的瓦片，使用实例化几何体
+                return createInstancedMesh(tiles, baseGeometry, material, yOffset);
+            }
+        }
+        
+        // 判断瓦片是否可以平铺合并
+        function canMergeTiles(tileType) {
+            const mergableTiles = [
+                TileType.FLOOR, 
+                TileType.MEDIUM_GROUND,
+                TileType.HIGH_GROUND,
+                TileType.LOW_GROUND,
+                TileType.ELEVATED,
+                TileType.LOWERED,
+                TileType.WATER,
+                TileType.BOMBSITE_A,
+                TileType.BOMBSITE_B,
+                TileType.T_SPAWN,
+                TileType.CT_SPAWN,
+                TileType.WALL  // 墙壁也支持合并
+            ];
+            return mergableTiles.includes(tileType);
+        }
+        
+        // 创建平铺合并网格（用于地板、包点、墙壁等）
+        function createMergedPlanarMesh(tiles, tileType, yOffset, floor, material) {
+            if (tiles.length === 0) return null;
+            
+            // 找到连续的矩形区域
+            const rectangles = findRectangularRegions(tiles);
+            
+            const mergedGeometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            const uvs = [];
+            const indices = [];
+            
+            let vertexIndex = 0;
+            
+            rectangles.forEach(rect => {
+                const { x, z, width, height } = rect;
+                const { height: tileHeight } = getTileProperties(tileType);
+                const isWall = tileType === TileType.WALL;
+                
+                if (isWall) {
+                    // 为墙壁创建完整的立方体
+                    vertexIndex = addBoxGeometry(vertices, normals, uvs, indices, 
+                        x, yOffset, z, width, tileHeight, height, vertexIndex);
+                } else {
+                    // 为其他瓦片创建平面
+                    vertexIndex = addPlaneGeometry(vertices, normals, uvs, indices,
+                        x, yOffset, z, width, tileHeight, height, vertexIndex);
+                }
+            });
+            
+            mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            mergedGeometry.setIndex(indices);
+            
+            const mesh = new THREE.Mesh(mergedGeometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            return mesh;
+        }
+        
+        // 添加立方体几何体（用于墙壁）
+        function addBoxGeometry(vertices, normals, uvs, indices, x, y, z, width, height, depth, startVertexIndex) {
+            const faces = [
+                // 前面
+                [[x, y, z + depth], [x + width, y, z + depth], [x + width, y + height, z + depth], [x, y + height, z + depth]],
+                // 后面  
+                [[x + width, y, z], [x, y, z], [x, y + height, z], [x + width, y + height, z]],
+                // 右面
+                [[x + width, y, z + depth], [x + width, y, z], [x + width, y + height, z], [x + width, y + height, z + depth]],
+                // 左面
+                [[x, y, z], [x, y, z + depth], [x, y + height, z + depth], [x, y + height, z]],
+                // 顶面
+                [[x, y + height, z + depth], [x + width, y + height, z + depth], [x + width, y + height, z], [x, y + height, z]],
+                // 底面
+                [[x, y, z], [x + width, y, z], [x + width, y, z + depth], [x, y, z + depth]]
+            ];
+            
+            const faceNormals = [
+                [0, 0, 1],   // 前面
+                [0, 0, -1],  // 后面
+                [1, 0, 0],   // 右面
+                [-1, 0, 0],  // 左面
+                [0, 1, 0],   // 顶面
+                [0, -1, 0]   // 底面
+            ];
+            
+            faces.forEach((face, faceIndex) => {
+                const startVertex = startVertexIndex;
+                
+                // 添加面的顶点
+                face.forEach(vertex => {
+                    vertices.push(...vertex);
+                    normals.push(...faceNormals[faceIndex]);
+                    uvs.push(0, 0); // 简化UV
+                });
+                
+                // 添加面的索引（两个三角形）
+                indices.push(
+                    startVertex, startVertex + 1, startVertex + 2,
+                    startVertex, startVertex + 2, startVertex + 3
+                );
+                
+                startVertexIndex += 4;
+            });
+            
+            return startVertexIndex;
+        }
+        
+        // 添加平面几何体（用于地板等）
+        function addPlaneGeometry(vertices, normals, uvs, indices, x, y, z, width, height, depth, startVertexIndex) {
+            // 底面顶点
+            vertices.push(
+                x, y, z,
+                x + width, y, z,
+                x + width, y, z + depth,
+                x, y, z + depth
+            );
+            
+            // 顶面顶点  
+            vertices.push(
+                x, y + height, z,
+                x + width, y + height, z,
+                x + width, y + height, z + depth,
+                x, y + height, z + depth
+            );
+            
+            // 法线
+            for (let i = 0; i < 4; i++) {
+                normals.push(0, -1, 0); // 底面
+            }
+            for (let i = 0; i < 4; i++) {
+                normals.push(0, 1, 0); // 顶面
+            }
+            
+            // UV坐标
+            uvs.push(0, 0, width, 0, width, depth, 0, depth);
+            uvs.push(0, 0, width, 0, width, depth, 0, depth);
+            
+            // 索引
+            // 底面
+            indices.push(
+                startVertexIndex, startVertexIndex + 1, startVertexIndex + 2,
+                startVertexIndex, startVertexIndex + 2, startVertexIndex + 3
+            );
+            // 顶面
+            indices.push(
+                startVertexIndex + 4, startVertexIndex + 6, startVertexIndex + 5,
+                startVertexIndex + 4, startVertexIndex + 7, startVertexIndex + 6
+            );
+            
+            return startVertexIndex + 8;
+        }
+        
+        // 查找矩形区域（贪心算法合并相邻瓦片）
+        function findRectangularRegions(tiles) {
+            const rectangles = [];
+            const used = new Set();
+            
+            // 创建位置查找表
+            const positionMap = new Map();
+            tiles.forEach(tile => {
+                positionMap.set(`${tile.x},${tile.z}`, tile);
+            });
+            
+            tiles.forEach(tile => {
+                const key = `${tile.x},${tile.z}`;
+                if (used.has(key)) return;
+                
+                // 找到以当前瓦片为起点的最大矩形
+                const rect = findMaxRectangle(tile, positionMap, used);
+                if (rect) {
+                    rectangles.push(rect);
+                }
+            });
+            
+            return rectangles;
+        }
+        
+        // 查找最大矩形（从给定起点开始）
+        function findMaxRectangle(startTile, positionMap, used) {
+            let maxWidth = 1;
+            let maxHeight = 1;
+            
+            // 向右扩展找最大宽度
+            while (positionMap.has(`${startTile.x + maxWidth},${startTile.z}`) && 
+                   !used.has(`${startTile.x + maxWidth},${startTile.z}`)) {
+                maxWidth++;
+            }
+            
+            // 向下扩展，检查每一行是否能保持相同宽度
+            let canExpand = true;
+            while (canExpand) {
+                for (let x = 0; x < maxWidth; x++) {
+                    const checkKey = `${startTile.x + x},${startTile.z + maxHeight}`;
+                    if (!positionMap.has(checkKey) || used.has(checkKey)) {
+                        canExpand = false;
+                        break;
+                    }
+                }
+                if (canExpand) {
+                    maxHeight++;
+                }
+            }
+            
+            // 标记所有使用的瓦片
+            for (let x = 0; x < maxWidth; x++) {
+                for (let z = 0; z < maxHeight; z++) {
+                    used.add(`${startTile.x + x},${startTile.z + z}`);
+                }
+            }
+            
+            return {
+                x: startTile.x,
+                z: startTile.z,
+                width: maxWidth,
+                height: maxHeight
+            };
+        }
+        
+        // 创建实例化网格（用于掩体、楼梯等特殊形状）
+        function createInstancedMesh(tiles, baseGeometry, material, yOffset) {
+            if (tiles.length === 0) return null;
+            
+            const instancedMesh = new THREE.InstancedMesh(baseGeometry, material, tiles.length);
+            instancedMesh.castShadow = true;
+            instancedMesh.receiveShadow = true;
+            
+            const matrix = new THREE.Matrix4();
+            
+            tiles.forEach((tile, index) => {
+                matrix.setPosition(tile.x, yOffset, tile.z);
+                instancedMesh.setMatrixAt(index, matrix);
+            });
+            
+            instancedMesh.instanceMatrix.needsUpdate = true;
+            
+            return instancedMesh;
+        }
+        
+        // 获取瓦片属性
+        function getTileProperties(tileType) {
+            switch(tileType) {
+                case TileType.FLOOR:
+                case TileType.MEDIUM_GROUND:
+                    return { height: 0.1 };
+                case TileType.WALL:
+                    return { height: 3 };
+                case TileType.HIGH_GROUND:
+                case TileType.ELEVATED:
+                    return { height: 1.5 };
+                case TileType.LOW_GROUND:
+                case TileType.LOWERED:
+                    return { height: 0.05 };
+                case TileType.WATER:
+                    return { height: 0.3 };
+                case TileType.BOMBSITE_A:
+                case TileType.BOMBSITE_B:
+                case TileType.T_SPAWN:
+                case TileType.CT_SPAWN:
+                    return { height: 0.2 };
+                default:
+                    return { height: 0.1 };
+            }
+        }
+        
+        // 创建3D瓦片
+        function create3DTile(tileType, x, y, z, floor) {
+            const { geometry, material } = get3DTileProperties(tileType, floor);
+            
+            if (!geometry || !material) return null;
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            return mesh;
+        }
+        
+        // 获取3D瓦片的几何体和材质
+        function get3DTileProperties(tileType, floor) {
+            let geometry, material;
+            
+            switch(tileType) {
+                case TileType.FLOOR:
+                case TileType.MEDIUM_GROUND:
+                    geometry = new THREE.BoxGeometry(1, 0.1, 1);
+                    material = new THREE.MeshLambertMaterial({ 
+                        color: floor === 0 ? 0x4a4a4a : floor === 1 ? 0x5a5a5a : 0x6a6a6a 
+                    });
+                    break;
+                    
+                case TileType.WALL:
+                    geometry = new THREE.BoxGeometry(1, 3, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0xb0b0b0 });
+                    break;
+                    
+                case TileType.HIGH_GROUND:
+                case TileType.ELEVATED:
+                    geometry = new THREE.BoxGeometry(1, 1.5, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x6a6a4a });
+                    break;
+                    
+                case TileType.LOW_GROUND:
+                case TileType.LOWERED:
+                    geometry = new THREE.BoxGeometry(1, 0.05, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x2a2a4a });
+                    break;
+                    
+                case TileType.COVER:
+                    geometry = new THREE.BoxGeometry(0.8, 1.2, 0.8);
+                    material = new THREE.MeshLambertMaterial({ color: 0x303030 });
+                    break;
+                    
+                case TileType.WATER:
+                    geometry = new THREE.BoxGeometry(1, 0.3, 1);
+                    material = new THREE.MeshLambertMaterial({ 
+                        color: 0x2a4d69, 
+                        transparent: true, 
+                        opacity: 0.7 
+                    });
+                    break;
+                    
+                case TileType.STAIRS_UP:
+                    geometry = new THREE.BoxGeometry(1, 0.8, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x8B7355 });
+                    break;
+                    
+                case TileType.STAIRS_DOWN:
+                    geometry = new THREE.BoxGeometry(1, 0.6, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x6B5345 });
+                    break;
+                    
+                case TileType.WINDOW:
+                    geometry = new THREE.BoxGeometry(1, 2, 0.1);
+                    material = new THREE.MeshLambertMaterial({ 
+                        color: 0x6a8caf, 
+                        transparent: true, 
+                        opacity: 0.6 
+                    });
+                    break;
+                    
+                case TileType.BOMBSITE_A:
+                    geometry = new THREE.BoxGeometry(1, 0.2, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x5a5a00 });
+                    break;
+                    
+                case TileType.BOMBSITE_B:
+                    geometry = new THREE.BoxGeometry(1, 0.2, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x5a3a00 });
+                    break;
+                    
+                case TileType.T_SPAWN:
+                    geometry = new THREE.BoxGeometry(1, 0.2, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x3a2020 });
+                    break;
+                    
+                case TileType.CT_SPAWN:
+                    geometry = new THREE.BoxGeometry(1, 0.2, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x203a20 });
+                    break;
+                    
+                case TileType.DOOR:
+                    geometry = new THREE.BoxGeometry(1, 2.5, 0.2);
+                    material = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                    break;
+                    
+                default:
+                    geometry = new THREE.BoxGeometry(1, 0.1, 1);
+                    material = new THREE.MeshLambertMaterial({ color: 0x404040 });
+                    break;
+            }
+            
+            return { geometry, material };
+        }
+
+        // 检查3D支持
+        function check3DSupport() {
+            const results = [];
+            
+            // 检查Three.js
+            if (typeof THREE !== 'undefined') {
+                results.push('✅ Three.js已加载');
+            } else {
+                results.push('❌ Three.js未加载');
+            }
+            
+            // 检查WebGL支持
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    results.push('✅ WebGL支持');
+                } else {
+                    results.push('❌ WebGL不支持');
+                }
+            } catch (e) {
+                results.push('❌ WebGL检查失败');
+            }
+            
+            // 检查OrbitControls
+            setTimeout(() => {
+                if (typeof THREE !== 'undefined' && THREE.OrbitControls) {
+                    results.push('✅ OrbitControls已加载');
+                } else {
+                    results.push('⚠️ OrbitControls未加载（将使用基础控制）');
+                }
+                console.log('3D支持检查结果:', results.join(', '));
+            }, 1000);
+            
+            return results;
+        }
+
+        // 当DOM加载完成时，初始化所有事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 检查3D支持
+            check3DSupport();
+            
+            // 3D预览按钮事件
+            document.getElementById('preview3DBtn').addEventListener('click', open3DPreview);
+            document.getElementById('close3DBtn').addEventListener('click', close3DPreview);
             
             // 生成初始地图
             generateMap();
