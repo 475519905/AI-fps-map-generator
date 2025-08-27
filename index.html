@@ -1421,12 +1421,57 @@
                 <input type="range" id="nadeSpots" min="5" max="100" value="15" step="5">
             </div>
             
+            <!-- UCC导出设置 -->
+            <div class="control-group">
+                <label style="color: var(--accent-color); font-weight: bold; border-bottom: 1px solid var(--accent-color); margin-bottom: 10px; padding-bottom: 5px;">UCC导出设置</label>
+            </div>
+            
+            <div class="control-group">
+                <label>Z轴旋转角度: <span class="value-display" id="uccZRotationValue">180</span>°</label>
+                <input type="range" id="uccZRotation" min="-360" max="360" value="180" step="1">
+            </div>
+            
+            <div class="control-group">
+                <label>位置倍增器: <span class="value-display" id="uccPositionMultiplierValue">1.00</span></label>
+                <input type="range" id="uccPositionMultiplier" min="0.1" max="10" value="1" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>缩放倍增器: <span class="value-display" id="uccScaleMultiplierValue">1.00</span></label>
+                <input type="range" id="uccScaleMultiplier" min="0.1" max="10" value="1" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>墙体高度: <span class="value-display" id="uccWallHeightValue">1.00</span></label>
+                <input type="range" id="uccWallHeight" min="0.1" max="10" value="1" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="uccAutoConvertNegative" style="margin-right:8px;vertical-align:middle;"> 负值转正
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <label></label>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <input type="file" id="templateFileInput" accept=".ucc" style="display:none;" />
+                </div>
+            </div>
+            
             <div class="control-group">
                 <div class="button-group unified-actions">
                     <button class="btn btn--primary btn--lg" id="generateBtn">生成地图</button>
                     <button class="btn btn--secondary btn--lg" id="randomBtn">随机生成</button>
                     <button class="btn btn--outline btn--lg" id="preview3DBtn">3D预览</button>
                     <button class="btn btn--ghost btn--lg export-btn" id="exportBtn">导出</button>
+                    <button class="btn btn--ghost btn--lg export-btn" id="exportUCCBtn">导出UCC</button>
+                </div>
+                
+                <!-- UCC导出日志 -->
+                <div class="control-group">
+                    <label></label>
+                    <div id="uccExportLog" style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; color: var(--text-secondary);"></div>
                 </div>
             </div>
         </div>
@@ -1827,6 +1872,23 @@
         
         document.getElementById('nadeSpots').oninput = function() {
             document.getElementById('nadeValue').textContent = this.value;
+        };
+        
+        // UCC导出控制器
+        document.getElementById('uccZRotation').oninput = function() {
+            document.getElementById('uccZRotationValue').textContent = this.value;
+        };
+        
+        document.getElementById('uccPositionMultiplier').oninput = function() {
+            document.getElementById('uccPositionMultiplierValue').textContent = parseFloat(this.value).toFixed(2);
+        };
+        
+        document.getElementById('uccScaleMultiplier').oninput = function() {
+            document.getElementById('uccScaleMultiplierValue').textContent = parseFloat(this.value).toFixed(2);
+        };
+        
+        document.getElementById('uccWallHeight').oninput = function() {
+            document.getElementById('uccWallHeightValue').textContent = parseFloat(this.value).toFixed(2);
         };
         
         // 游戏模式选择事件
@@ -5353,6 +5415,662 @@
             a.click();
             URL.revokeObjectURL(url);
         }
+
+        // UCC导出日志功能
+        function logUCCExport(message) {
+            const logElement = document.getElementById('uccExportLog');
+            if (logElement) {
+                const timestamp = new Date().toLocaleTimeString();
+                logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+            console.log(message);
+        }
+
+        function clearUCCLog() {
+            const logElement = document.getElementById('uccExportLog');
+            if (logElement) {
+                logElement.innerHTML = '';
+            }
+        }
+
+        // UCC导出功能 - 基于Python脚本精确实现
+        async function exportUCC() {
+            try {
+                clearUCCLog();
+                logUCCExport('🚀 开始UCC导出...');
+                
+                // 获取导出参数
+                const zRotation = parseFloat(document.getElementById('uccZRotation').value);
+                const positionMultiplier = parseFloat(document.getElementById('uccPositionMultiplier').value);
+                const scaleMultiplier = parseFloat(document.getElementById('uccScaleMultiplier').value);
+                const autoConvertNegative = document.getElementById('uccAutoConvertNegative').checked;
+                const wallHeightMultiplier = parseFloat(document.getElementById('uccWallHeight').value) || 1;
+                const sourceFile = 'mf5';
+
+                logUCCExport(`📋 导出参数: Z轴旋转=${zRotation}°, 位置倍增=${positionMultiplier}, 缩放倍增=${scaleMultiplier}, 墙高倍增=${wallHeightMultiplier}, 负值转正=${autoConvertNegative}, 源文件=${sourceFile}.ucc（仅允许导入弹窗方式）`);
+
+                // 检查地图数据
+                if (!mapFloors || mapFloors.length === 0) {
+                    throw new Error('请先生成地图再导出');
+                }
+                logUCCExport(`📊 地图数据: ${mapFloors.length}层, 总共${totalFloors}层`);
+                
+                // 使用导入弹窗拾取的 mf5.ucc 模板；若未导入则立刻弹出选择
+                let sourceTemplate = window.__importedUccTemplate;
+                if (!sourceTemplate || !(sourceTemplate instanceof ArrayBuffer)) {
+                    const fileInput = document.getElementById('templateFileInput');
+                    if (!fileInput) throw new Error('缺少模板文件输入控件');
+                    logUCCExport('📥 需要 mf5.ucc 模板，正在打开文件选择对话框...');
+                    const arrayBuffer = await new Promise((resolve, reject) => {
+                        const handler = async function() {
+                            const file = fileInput.files && fileInput.files[0];
+                            if (!file) {
+                                reject(new Error('未选择文件'));
+                                fileInput.removeEventListener('change', handler);
+                                return;
+                            }
+                            const nameLower = file.name.toLowerCase();
+                            if (nameLower !== 'mf5.ucc') {
+                                reject(new Error('只允许选择文件名为 mf5.ucc 的模板'));
+                                fileInput.value = '';
+                                fileInput.removeEventListener('change', handler);
+                                return;
+                            }
+                            try {
+                                const buf = await file.arrayBuffer();
+                                resolve(buf);
+                            } catch(e) {
+                                reject(e);
+                            } finally {
+                                fileInput.removeEventListener('change', handler);
+                            }
+                        };
+                        fileInput.addEventListener('change', handler);
+                        // 触发系统文件选择
+                        fileInput.value = '';
+                        fileInput.click();
+                    });
+                    window.__importedUccTemplate = arrayBuffer;
+                    sourceTemplate = arrayBuffer;
+                }
+                logUCCExport(`✅ 已使用导入的 mf5.ucc 模板 (${sourceTemplate.byteLength} 字节)`);
+
+                // 创建UCC二进制文件
+                logUCCExport('🔧 正在处理地图数据并生成UCC文件...');
+                const uccData = await createUCCFileFromTemplate(sourceTemplate, mapFloors, totalFloors, {
+                    zRotation,
+                    positionMultiplier,
+                    scaleMultiplier,
+                    wallHeightMultiplier,
+                    autoConvertNegative,
+                    sourceFile
+                });
+
+                // 下载文件
+                const filename = 'exported_map_' + Date.now() + '.ucc';
+                const blob = new Blob([uccData], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                logUCCExport(`🎉 UCC文件导出成功！文件名: ${filename} (${uccData.byteLength} 字节)`);
+            } catch (error) {
+                logUCCExport(`❌ UCC导出失败: ${error.message}`);
+                console.error('UCC导出失败:', error);
+                alert('UCC导出失败: ' + error.message);
+            }
+        }
+
+        // 已禁用的模板加载（统一通过导入弹窗）
+        async function loadUCCTemplate() {
+            throw new Error('模板加载已改为仅通过导入弹窗选择 mf5.ucc');
+        }
+
+        // 创建最小UCC模板（已禁用 - 仅使用现有模板）
+        function createMinimalUCCTemplate() {
+            // 此功能已被禁用，因为我们只允许使用现有的模板文件
+            throw new Error("禁止创建新的UCC模板文件。必须使用Core文件夹中现有的模板文件。");
+        }
+
+        // 基于现有模板修改UCC文件 - 遵循Python脚本的精确实现
+        async function createUCCFileFromTemplate(templateBuffer, floors, totalFloors, options) {
+            // 复制现有模板到缓冲区进行修改 (禁止新建文件)
+            const buffer = templateBuffer.slice();
+            const view = new DataView(buffer);
+            
+            logUCCExport(`📋 基于现有模板进行修改 (${buffer.byteLength} 字节)`);
+            
+            // 收集所有立方体数据
+            const cubes = [];
+            
+            for (let floorIndex = 0; floorIndex < floors.length; floorIndex++) {
+                const floor = floors[floorIndex];
+                const floorHeight = floorIndex * 10; // 每层10个单位高
+                
+                for (let y = 0; y < floor.length; y++) {
+                    for (let x = 0; x < floor[y].length; x++) {
+                        const cell = floor[y][x];
+                        if (cell === TileType.WALL) { // 墙体
+                            cubes.push({
+                                name: `Wall_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight,
+                                scaleX: 1,
+                                scaleY: 1,
+                                scaleZ: 1,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        } else if (cell === TileType.FLOOR) { // 房间地板
+                            cubes.push({
+                                name: `Floor_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight - 0.5,
+                                scaleX: 1,
+                                scaleY: 1,
+                                scaleZ: 0.1,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        } else if (cell === TileType.DOOR) { // 特殊方块
+                            cubes.push({
+                                name: `Special_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight,
+                                scaleX: 1,
+                                scaleY: 1,
+                                scaleZ: 1,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        }
+                    }
+                }
+            }
+            
+            logUCCExport(`📦 收集到 ${cubes.length} 个立方体对象`);
+            
+            // 应用围绕中心点的Z轴旋转 - 基于Python实现
+            if (options.zRotation !== 0) {
+                logUCCExport(`🔄 应用Z轴旋转 ${options.zRotation}°...`);
+                applyCenterRotationPython(cubes, options.zRotation);
+            }
+            
+            // 计算文件能容纳的最大方块数 - 基于Python公式
+            const maxPossibleCubes = Math.floor((buffer.byteLength - 127) / 200);
+            logUCCExport(`🗂️ 文件可容纳约 ${maxPossibleCubes} 个立方体，实际需要 ${cubes.length} 个`);
+            
+            // 按Python脚本方式写入立方体数据
+            for (let i = 0; i < cubes.length && i < maxPossibleCubes; i++) {
+                const cube = cubes[i];
+                
+                // 使用Python脚本的固定索引计算方式
+                const baseIndex = 127 + (i * 200);
+                const coordStart = baseIndex;
+                const rotationStart = baseIndex + 12;
+                const sizeIndex = baseIndex + 28;
+                
+                // 检查索引是否在文件范围内
+                if (sizeIndex + 12 > buffer.byteLength) {
+                    console.warn(`立方体 ${cube.name} 在索引 ${i} 处超出文件大小`);
+                    continue;
+                }
+                
+                // 转换坐标系统（Blender到UCC）- 基于Python实现
+                const uccX = cube.x * 35 * options.positionMultiplier;
+                const uccY = cube.y * 35 * options.positionMultiplier;
+                const uccZ = cube.z * 35 * options.positionMultiplier;
+                
+                // 转换旋转（四元数）
+                const uccRotation = [cube.rotationX, cube.rotationY, cube.rotationZ, cube.rotationW];
+                
+                // 转换尺寸，应用缩放倍增器和负值转换
+                let scaleX = cube.scaleX * options.scaleMultiplier;
+                let scaleY = cube.scaleY * options.scaleMultiplier;
+                let scaleZ = cube.scaleZ * options.scaleMultiplier;
+                // 对墙体应用额外的高度倍增
+                if (cube.name.startsWith('Wall_') && typeof options.wallHeightMultiplier === 'number') {
+                    scaleZ = scaleZ * options.wallHeightMultiplier;
+                }
+                
+                if (options.autoConvertNegative) {
+                    scaleX = Math.abs(scaleX);
+                    scaleY = Math.abs(scaleY);
+                    scaleZ = Math.abs(scaleZ);
+                }
+                
+                // 写入数据到指定位置 - 遵循Python的struct.pack格式
+                // 写入坐标 (12字节，小端序)
+                if (coordStart >= 0 && coordStart + 12 <= buffer.byteLength) {
+                    view.setFloat32(coordStart, uccX, true);
+                    view.setFloat32(coordStart + 4, uccY, true);
+                    view.setFloat32(coordStart + 8, uccZ, true);
+                }
+                
+                // 写入旋转 (16字节，小端序，四元数XYZW)
+                if (rotationStart >= 0 && rotationStart + 16 <= buffer.byteLength) {
+                    view.setFloat32(rotationStart, uccRotation[0], true);
+                    view.setFloat32(rotationStart + 4, uccRotation[1], true);
+                    view.setFloat32(rotationStart + 8, uccRotation[2], true);
+                    view.setFloat32(rotationStart + 12, uccRotation[3], true);
+                }
+                
+                // 写入尺寸 (在分隔符后12字节，小端序)
+                if (sizeIndex >= 0 && sizeIndex + 16 <= buffer.byteLength) {
+                    // 确保分隔符存在
+                    view.setUint8(sizeIndex, 0x00);
+                    view.setUint8(sizeIndex + 1, 0x00);
+                    view.setUint8(sizeIndex + 2, 0x80);
+                    view.setUint8(sizeIndex + 3, 0x3F);
+                    
+                    // 写入尺寸数据
+                    view.setFloat32(sizeIndex + 4, scaleX, true);
+                    view.setFloat32(sizeIndex + 8, scaleY, true);
+                    view.setFloat32(sizeIndex + 12, scaleZ, true);
+                }
+                
+                // 每隔一定数量显示进度
+                if (i % 50 === 0 || i === cubes.length - 1) {
+                    logUCCExport(`📝 正在写入立方体数据... ${i + 1}/${cubes.length}`);
+                }
+            }
+            
+            // 将多余的方块位置归零 - 基于Python实现
+            const maxCubes = Math.min(10000, maxPossibleCubes);
+            logUCCExport(`🧹 清理多余位置... (${cubes.length} 到 ${maxCubes})`);
+            for (let i = cubes.length; i < maxCubes; i++) {
+                const baseIndex = 127 + (i * 200);
+                const coordStart = baseIndex;
+                const rotationStart = baseIndex + 12;
+                const sizeIndex = baseIndex + 28;
+                
+                // 检查索引是否在文件范围内
+                if (sizeIndex + 12 > buffer.byteLength) {
+                    break;
+                }
+                
+                // 位置归零
+                if (coordStart >= 0 && coordStart + 12 <= buffer.byteLength) {
+                    view.setFloat32(coordStart, 0.0, true);
+                    view.setFloat32(coordStart + 4, 0.0, true);
+                    view.setFloat32(coordStart + 8, 0.0, true);
+                }
+                
+                // 旋转归零（默认四元数）
+                if (rotationStart >= 0 && rotationStart + 16 <= buffer.byteLength) {
+                    view.setFloat32(rotationStart, 0.0, true);
+                    view.setFloat32(rotationStart + 4, 0.0, true);
+                    view.setFloat32(rotationStart + 8, 0.0, true);
+                    view.setFloat32(rotationStart + 12, 1.0, true);
+                }
+                
+                // 尺寸归零
+                if (sizeIndex >= 0 && sizeIndex + 16 <= buffer.byteLength) {
+                    view.setFloat32(sizeIndex + 4, 0.0, true);
+                    view.setFloat32(sizeIndex + 8, 0.0, true);
+                    view.setFloat32(sizeIndex + 12, 0.0, true);
+                }
+            }
+            
+            logUCCExport(`✅ 已导出 ${cubes.length} 个立方体，多余位置已清理`);
+            return buffer;
+        }
+
+        // 应用围绕中心点的Z轴旋转 - 基于Python mathutils实现
+        function applyCenterRotationPython(cubes, zAngleDegrees) {
+            if (cubes.length === 0) return;
+            
+            // 计算所有立方体的平均位置（组合中心点）
+            let totalX = 0, totalY = 0, totalZ = 0;
+            for (const cube of cubes) {
+                totalX += cube.x;
+                totalY += cube.y;
+                totalZ += cube.z;
+            }
+            const centerX = totalX / cubes.length;
+            const centerY = totalY / cubes.length;
+            const centerZ = totalZ / cubes.length;
+            
+            logUCCExport(`🎯 计算组合中心点: (${centerX.toFixed(3)}, ${centerY.toFixed(3)}, ${centerZ.toFixed(3)})`);
+            
+            // 转换角度为弧度
+            const zAngleRad = zAngleDegrees * Math.PI / 180;
+            
+            // 创建Z轴旋转四元数 - 基于Python的实现
+            const zQuat = {
+                x: 0,
+                y: 0,
+                z: Math.sin(zAngleRad / 2),
+                w: Math.cos(zAngleRad / 2)
+            };
+            
+            // 对每个立方体应用围绕组合中心的旋转
+            for (const cube of cubes) {
+                // 计算相对于组合中心的偏移
+                const offsetX = cube.x - centerX;
+                const offsetY = cube.y - centerY;
+                const offsetZ = cube.z - centerZ;
+                
+                // 应用Z轴旋转到偏移向量
+                const rotatedOffsetX = offsetX * Math.cos(zAngleRad) - offsetY * Math.sin(zAngleRad);
+                const rotatedOffsetY = offsetX * Math.sin(zAngleRad) + offsetY * Math.cos(zAngleRad);
+                const rotatedOffsetZ = offsetZ; // Z轴旋转不影响Z坐标
+                
+                // 计算新的位置
+                cube.x = centerX + rotatedOffsetX;
+                cube.y = centerY + rotatedOffsetY;
+                cube.z = centerZ + rotatedOffsetZ;
+                
+                // 应用旋转到物体的朝向（四元数乘法）
+                const originalQuat = {
+                    x: cube.rotationX,
+                    y: cube.rotationY,
+                    z: cube.rotationZ,
+                    w: cube.rotationW
+                };
+                
+                // 四元数乘法：zQuat * originalQuat
+                const newQuat = multiplyQuaternions(zQuat, originalQuat);
+                cube.rotationX = newQuat.x;
+                cube.rotationY = newQuat.y;
+                cube.rotationZ = newQuat.z;
+                cube.rotationW = newQuat.w;
+            }
+            
+            logUCCExport(`✅ 所有立方体已围绕组合中心完成 Z轴${zAngleDegrees}° 整体旋转`);
+        }
+        
+        // 四元数乘法
+        function multiplyQuaternions(q1, q2) {
+            return {
+                w: q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z,
+                x: q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
+                y: q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
+                z: q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w
+            };
+        }
+
+        // 创建UCC文件的核心函数（保留兼容性）
+        function createUCCFile(floors, totalFloors, options) {
+            // 创建基础UCC文件模板
+            const baseTemplate = createUCCTemplate(options.sourceFile);
+            
+            // 收集所有立方体数据
+            const cubes = [];
+            
+            for (let floorIndex = 0; floorIndex < floors.length; floorIndex++) {
+                const floor = floors[floorIndex];
+                const floorHeight = floorIndex * 10; // 每层10个单位高
+                
+                for (let y = 0; y < floor.length; y++) {
+                    for (let x = 0; x < floor[y].length; x++) {
+                        const cell = floor[y][x];
+                        if (cell === TileType.WALL) { // 墙体
+                            cubes.push({
+                                name: `Wall_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight,
+                                scaleX: 1,
+                                scaleY: 1,
+                                scaleZ: 1,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        } else if (cell === TileType.FLOOR) { // 房间地板
+                            cubes.push({
+                                name: `Floor_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight - 0.5,
+                                scaleX: 1,
+                                scaleY: 1,
+                                scaleZ: 0.1,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        } else if (cell === TileType.DOOR) { // 特殊方块
+                            cubes.push({
+                                name: `Special_${floorIndex}_${x}_${y}`,
+                                x: x,
+                                y: y,
+                                z: floorHeight,
+                                scaleX: 1.2,
+                                scaleY: 1.2,
+                                scaleZ: 1.2,
+                                rotationX: 0,
+                                rotationY: 0,
+                                rotationZ: 0,
+                                rotationW: 1
+                            });
+                        }
+                    }
+                }
+            }
+
+            console.log(`生成了 ${cubes.length} 个立方体`);
+
+            // 应用Z轴旋转变换（围绕中心点）
+            if (options.zRotation !== 0) {
+                applyCenterRotation(cubes, options.zRotation);
+            }
+
+            // 写入立方体数据到UCC模板
+            return writeObjectsToUCC(baseTemplate, cubes, options);
+        }
+
+        // 创建UCC模板
+        function createUCCTemplate(sourceType) {
+            // 创建基础UCC文件结构
+            // 最小UCC文件大小约为127字节的头部 + 20000 * 200字节的数据区域
+            const headerSize = 127;
+            const maxObjects = 10000;
+            const objectSize = 200; // 每个物体200字节
+            const totalSize = headerSize + (maxObjects * objectSize);
+            
+            const buffer = new ArrayBuffer(totalSize);
+            const view = new DataView(buffer);
+            
+            // 写入UCC文件头 (简化版本)
+            // 这里我们创建一个最小的有效UCC头部
+            const header = new Uint8Array([
+                0x55, 0x43, 0x43, 0x20, // "UCC "
+                0x01, 0x00, 0x00, 0x00, // 版本
+                0x00, 0x00, 0x00, 0x00, // 保留字段
+                0x7F, 0x00, 0x00, 0x00  // 数据开始偏移 (127)
+            ]);
+            
+            // 复制头部到缓冲区
+            const headerView = new Uint8Array(buffer, 0, header.length);
+            headerView.set(header);
+            
+            // 填充剩余头部为零
+            for (let i = header.length; i < headerSize; i++) {
+                view.setUint8(i, 0);
+            }
+            
+            return buffer;
+        }
+
+        // 应用围绕中心点的Z轴旋转
+        function applyCenterRotation(cubes, zAngleDegrees) {
+            if (cubes.length === 0) return;
+            
+            // 计算所有立方体的中心点
+            let centerX = 0, centerY = 0, centerZ = 0;
+            for (const cube of cubes) {
+                centerX += cube.x;
+                centerY += cube.y;
+                centerZ += cube.z;
+            }
+            centerX /= cubes.length;
+            centerY /= cubes.length;
+            centerZ /= cubes.length;
+            
+            console.log(`中心点: (${centerX.toFixed(2)}, ${centerY.toFixed(2)}, ${centerZ.toFixed(2)})`);
+            
+            // 转换角度为弧度
+            const zAngleRad = zAngleDegrees * Math.PI / 180;
+            const cos = Math.cos(zAngleRad);
+            const sin = Math.sin(zAngleRad);
+            
+            // 创建Z轴旋转四元数
+            const rotationQuat = {
+                x: 0,
+                y: 0,
+                z: Math.sin(zAngleRad / 2),
+                w: Math.cos(zAngleRad / 2)
+            };
+            
+            // 对每个立方体应用旋转
+            for (const cube of cubes) {
+                // 计算相对于中心点的偏移
+                const offsetX = cube.x - centerX;
+                const offsetY = cube.y - centerY;
+                
+                // 应用旋转到偏移向量
+                const rotatedX = offsetX * cos - offsetY * sin;
+                const rotatedY = offsetX * sin + offsetY * cos;
+                
+                // 更新位置
+                cube.x = centerX + rotatedX;
+                cube.y = centerY + rotatedY;
+                
+                // 应用旋转到物体的朝向（四元数乘法）
+                const currentQuat = {
+                    x: cube.rotationX,
+                    y: cube.rotationY,
+                    z: cube.rotationZ,
+                    w: cube.rotationW
+                };
+                
+                const newQuat = multiplyQuaternions(rotationQuat, currentQuat);
+                cube.rotationX = newQuat.x;
+                cube.rotationY = newQuat.y;
+                cube.rotationZ = newQuat.z;
+                cube.rotationW = newQuat.w;
+            }
+            
+            console.log(`已对 ${cubes.length} 个立方体应用 ${zAngleDegrees}° Z轴旋转`);
+        }
+
+        // 四元数乘法
+        function multiplyQuaternions(q1, q2) {
+            return {
+                x: q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
+                y: q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
+                z: q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w,
+                w: q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z
+            };
+        }
+
+        // 将立方体数据写入UCC文件
+        function writeObjectsToUCC(templateBuffer, cubes, options) {
+            const buffer = templateBuffer.slice(); // 创建副本
+            const view = new DataView(buffer);
+            
+            const headerSize = 127;
+            const objectSize = 200;
+            const maxObjects = Math.min(cubes.length, 10000);
+            
+            console.log(`写入 ${maxObjects} 个物体到UCC文件`);
+            
+            // 写入每个立方体的数据
+            for (let i = 0; i < maxObjects; i++) {
+                const cube = cubes[i];
+                const baseIndex = headerSize + (i * objectSize);
+                
+                // 转换坐标系统（Web坐标到UCC坐标）
+                const uccX = cube.x * 35 * options.positionMultiplier;
+                const uccY = cube.y * 35 * options.positionMultiplier;
+                const uccZ = cube.z * 35 * options.positionMultiplier;
+                
+                // 处理缩放
+                let scaleX = cube.scaleX * options.scaleMultiplier;
+                let scaleY = cube.scaleY * options.scaleMultiplier;
+                let scaleZ = cube.scaleZ * options.scaleMultiplier;
+                
+                if (options.autoConvertNegative) {
+                    scaleX = Math.abs(scaleX);
+                    scaleY = Math.abs(scaleY);
+                    scaleZ = Math.abs(scaleZ);
+                }
+                
+                // 写入坐标 (12字节)
+                const coordStart = baseIndex;
+                view.setFloat32(coordStart, uccX, true);      // X坐标
+                view.setFloat32(coordStart + 4, uccY, true);  // Y坐标
+                view.setFloat32(coordStart + 8, uccZ, true);  // Z坐标
+                
+                // 写入旋转 (16字节，四元数XYZW)
+                const rotationStart = baseIndex + 12;
+                view.setFloat32(rotationStart, cube.rotationX, true);     // X
+                view.setFloat32(rotationStart + 4, cube.rotationY, true); // Y
+                view.setFloat32(rotationStart + 8, cube.rotationZ, true); // Z
+                view.setFloat32(rotationStart + 12, cube.rotationW, true); // W
+                
+                // 写入尺寸分隔符和尺寸 (4 + 12字节)
+                const sizeStart = baseIndex + 28;
+                // 尺寸分隔符
+                view.setUint8(sizeStart, 0x00);
+                view.setUint8(sizeStart + 1, 0x00);
+                view.setUint8(sizeStart + 2, 0x80);
+                view.setUint8(sizeStart + 3, 0x3F);
+                
+                // 尺寸数据
+                view.setFloat32(sizeStart + 4, scaleX, true);  // X尺寸
+                view.setFloat32(sizeStart + 8, scaleY, true);  // Y尺寸
+                view.setFloat32(sizeStart + 12, scaleZ, true); // Z尺寸
+                
+                // 写入物体名称 (从44字节开始)
+                const nameStart = baseIndex + 44;
+                const nameBytes = new TextEncoder().encode(cube.name);
+                const maxNameLength = Math.min(nameBytes.length, 155); // 预留空间
+                
+                for (let j = 0; j < maxNameLength; j++) {
+                    view.setUint8(nameStart + j, nameBytes[j]);
+                }
+                // 名称结束符
+                if (nameStart + maxNameLength < buffer.byteLength) {
+                    view.setUint8(nameStart + maxNameLength, 0);
+                }
+            }
+            
+            // 清零剩余的物体位置
+            for (let i = maxObjects; i < 10000; i++) {
+                const baseIndex = headerSize + (i * objectSize);
+                if (baseIndex + objectSize <= buffer.byteLength) {
+                    // 清零整个物体数据区域
+                    for (let j = 0; j < objectSize; j++) {
+                        view.setUint8(baseIndex + j, 0);
+                    }
+                    
+                    // 设置默认旋转四元数 (0, 0, 0, 1)
+                    const rotationStart = baseIndex + 12;
+                    view.setFloat32(rotationStart + 12, 1.0, true); // W = 1
+                }
+            }
+            
+            console.log('UCC文件数据写入完成');
+            return buffer;
+        }
         
         // 找到最佳的门位置
         function findBestDoorPosition(room, floor) {
@@ -6676,6 +7394,7 @@
                 generateMap();
             });
             document.getElementById('exportBtn').addEventListener('click', exportMap);
+            document.getElementById('exportUCCBtn').addEventListener('click', exportUCC);
             
             // 种子系统事件监听器
             document.getElementById('saveSeedBtn').addEventListener('click', saveCurrentSeed);
