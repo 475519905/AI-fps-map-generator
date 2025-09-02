@@ -1168,6 +1168,194 @@
             border-color: var(--button-secondary);
         }
 
+        /* UCC导出使用说明弹窗样式 */
+        .ucc-tutorial-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .ucc-tutorial-modal-content {
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-color);
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .ucc-tutorial-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+        }
+
+        .ucc-tutorial-modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .ucc-tutorial-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+        }
+
+        .ucc-tutorial-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ucc-tutorial-modal-body {
+            padding: 25px;
+        }
+
+        .ucc-tutorial-step {
+            display: flex;
+            margin-bottom: 25px;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .ucc-tutorial-step-number {
+            background: var(--accent-color);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            flex-shrink: 0;
+        }
+
+        .ucc-tutorial-step-content h3 {
+            margin: 0 0 10px 0;
+            color: var(--accent-color);
+            font-size: 1.2em;
+        }
+
+        .ucc-tutorial-step-content p {
+            margin: 5px 0;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .ucc-tutorial-step-content strong {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .ucc-tutorial-tips {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .ucc-tutorial-tips h4 {
+            margin: 0 0 15px 0;
+            color: var(--accent-color);
+            font-size: 1.1em;
+        }
+
+        .ucc-tutorial-tips ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .ucc-tutorial-tips li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .ucc-tutorial-modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            background: var(--bg-secondary);
+            border-radius: 0 0 15px 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .ucc-tutorial-modal-content {
+                width: 95%;
+                margin: 20px;
+            }
+            
+            .ucc-tutorial-modal-header {
+                padding: 15px 20px;
+            }
+            
+            .ucc-tutorial-modal-header h2 {
+                font-size: 1.3em;
+            }
+            
+            .ucc-tutorial-modal-body {
+                padding: 20px;
+            }
+            
+            .ucc-tutorial-step {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            .ucc-tutorial-modal-footer {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
 
     </style>
 </head>
@@ -5434,9 +5622,50 @@
             }
         }
 
+        // UCC导出使用说明弹窗相关函数
+        function showUccTutorial() {
+            const modal = document.getElementById('uccTutorialModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // 添加ESC键关闭功能
+                document.addEventListener('keydown', handleTutorialKeydown);
+            }
+        }
+
+        function closeUccTutorial(neverShowAgain = false) {
+            const modal = document.getElementById('uccTutorialModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // 移除ESC键监听
+                document.removeEventListener('keydown', handleTutorialKeydown);
+                
+                // 如果用户选择不再显示，保存到localStorage
+                if (neverShowAgain) {
+                    localStorage.setItem('uccTutorialShown', 'true');
+                }
+            }
+        }
+
+        function handleTutorialKeydown(event) {
+            if (event.key === 'Escape') {
+                closeUccTutorial();
+            }
+        }
+
+        function shouldShowUccTutorial() {
+            // 检查是否已经显示过教程
+            return localStorage.getItem('uccTutorialShown') !== 'true';
+        }
+
         // UCC导出功能 - 基于Python脚本精确实现
         async function exportUCC() {
             try {
+                // 检查是否需要显示首次使用教程
+                if (shouldShowUccTutorial()) {
+                    showUccTutorial();
+                    return; // 显示教程后停止执行，用户关闭教程后需要重新点击导出按钮
+                }
+
                 clearUCCLog();
                 logUCCExport('🚀 开始UCC导出...');
                 
@@ -8500,5 +8729,54 @@
             generateMap();
         });
     </script>
+
+    <!-- UCC导出使用说明弹窗 -->
+    <div id="uccTutorialModal" class="ucc-tutorial-modal" style="display: none;">
+        <div class="ucc-tutorial-modal-content">
+            <div class="ucc-tutorial-modal-header">
+                <h2>🎮 UCC导出使用说明</h2>
+                <button class="ucc-tutorial-close" onclick="closeUccTutorial()">&times;</button>
+            </div>
+            <div class="ucc-tutorial-modal-body">
+                <div class="ucc-tutorial-step">
+                    <div class="ucc-tutorial-step-number">1</div>
+                    <div class="ucc-tutorial-step-content">
+                        <h3>创建UCC模板文件</h3>
+                        <p>首先在游戏中创建一个UCC文件，命名为 <strong>mf5.ucc</strong></p>
+                        <p>在文件中放置约 <strong>4000个方块</strong> 作为模板</p>
+                    </div>
+                </div>
+                <div class="ucc-tutorial-step">
+                    <div class="ucc-tutorial-step-number">2</div>
+                    <div class="ucc-tutorial-step-content">
+                        <h3>选择模板文件</h3>
+                        <p>在网页中点击"导出UCC"按钮</p>
+                        <p>系统会自动弹出文件选择对话框</p>
+                        <p>选择您创建的 <strong>mf5.ucc</strong> 文件</p>
+                    </div>
+                </div>
+                <div class="ucc-tutorial-step">
+                    <div class="ucc-tutorial-step-number">3</div>
+                    <div class="ucc-tutorial-step-content">
+                        <h3>导出地图</h3>
+                        <p>选择模板文件后，系统会自动处理地图数据</p>
+                        <p>生成包含您地图的UCC文件并自动下载</p>
+                    </div>
+                </div>
+                <div class="ucc-tutorial-tips">
+                    <h4>💡 提示</h4>
+                    <ul>
+                        <li>模板文件只需要导入一次，后续导出会重复使用</li>
+                        <li>确保模板文件包含足够的方块数量（约4000个）</li>
+                        <li>导出的UCC文件可以直接在游戏中使用</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="ucc-tutorial-modal-footer">
+                <button class="btn btn--primary" onclick="closeUccTutorial()">我知道了</button>
+                <button class="btn btn--secondary" onclick="closeUccTutorial(true)">不再显示</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
